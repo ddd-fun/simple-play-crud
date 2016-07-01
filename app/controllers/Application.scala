@@ -10,4 +10,9 @@ object Application extends Controller {
   }
 
 
+  def addAdvert = Action{ request =>
+    NotImplemented
+  }
+
+
 }

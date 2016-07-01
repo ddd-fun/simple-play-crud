@@ -1,5 +1,7 @@
 import org.specs2.runner._
 import org.junit.runner._
+import play.api.http.Writeable
+import play.api.libs.json.Json
 
 import play.api.libs.ws._
 import play.api.test._
@@ -22,11 +24,14 @@ class ApplicationSpec extends PlaySpecification {
       response.body must contain("Your new application is ready.")
     }
 
-    "advert app is not available yet" in new WithServer(port=PORT_9000){
+    "add advert is not implemented yet" in new WithServer(port=PORT_9000){
 
-      val response = await(WS.url(APP_URL+"/advert").get())
+      val response = await(WS.url(APP_URL+"/adverts")
+                    .post(Json.obj("guid"-> "1231456789",
+                                   "fuel"-> "diesel",
+                                   "price" -> "integer")))
 
-      response.status must equalTo(NOT_FOUND)
+      response.status must equalTo(NOT_IMPLEMENTED)
     }
   }
 }
