@@ -2,6 +2,7 @@ git addlogs
 project/project
 project/target
 target
+logs
 tmp
 .history
 dist
