@@ -16,7 +16,7 @@ class ApplicationSpec extends PlaySpecification {
 
   "Application" should {
 
-    "render the index page" in new WithServer(port=PORT_9000) {
+    "render the index page" in new WithServer(port = PORT_9000) {
 
       val response = await(WS.url(APP_URL).get())
 
@@ -24,12 +24,12 @@ class ApplicationSpec extends PlaySpecification {
       response.body must contain("Your new application is ready.")
     }
 
-    "add advert and return guid" in new WithServer(port=PORT_9000){
+    "add advert and return guid" in new WithServer(port = PORT_9000) {
 
-      val response = await(WS.url(APP_URL+"/adverts")
-                    .post(Json.obj("title" -> "Audi A4",
-                                   "fuel"-> "diesel",
-                                   "price" -> 5000)))
+      val response = await(WS.url(APP_URL + "/adverts")
+        .post(Json.obj("title" -> "Audi A4",
+        "fuel" -> "diesel",
+        "price" -> 5000)))
 
       response.status must equalTo(OK).setMessage(response.body)
 
@@ -39,29 +39,29 @@ class ApplicationSpec extends PlaySpecification {
 
     }
 
-    "return not found for unknown advert" in new WithServer(port=PORT_9000){
+    "return not found for unknown advert" in new WithServer(port = PORT_9000) {
 
       val guid = java.util.UUID.randomUUID.toString
 
-      val response = await(WS.url(APP_URL+s"/adverts/$guid").get)
+      val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
 
       response.status must equalTo(NOT_FOUND)
 
     }
 
 
-    "return stored advert by guid" in new WithServer(port=PORT_9000){
+    "return stored advert by guid" in new WithServer(port = PORT_9000) {
 
-      val addResponse = await(WS.url(APP_URL+"/adverts")
-                          .post(Json.obj("title" -> "Audi A4",
-                                         "fuel"-> "diesel",
-                                         "price" -> 5000)))
+      val addResponse = await(WS.url(APP_URL + "/adverts")
+        .post(Json.obj("title" -> "Audi A4",
+        "fuel" -> "diesel",
+        "price" -> 5000)))
 
       addResponse.status must equalTo(OK)
 
       val guid = (Json.parse(addResponse.body) \ "guid").as[String]
 
-      val response = await(WS.url(APP_URL+s"/adverts/$guid").get)
+      val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
 
       response.status must equalTo(OK).setMessage(response.body)
 
@@ -73,5 +73,35 @@ class ApplicationSpec extends PlaySpecification {
 
     }
 
+
+    "update stored advert" in new WithServer(port = PORT_9000) {
+
+      val addResponse = await(WS.url(APP_URL + "/adverts")
+        .post(Json.obj("title" -> "Audi A4",
+        "fuel" -> "diesel",
+        "price" -> 5000)))
+
+      addResponse.status must equalTo(OK)
+
+      val guid = (Json.parse(addResponse.body) \ "guid").as[String]
+
+      val updateResponse = await(WS.url(APP_URL + s"/adverts/$guid")
+        .put(Json.obj("title" -> "Audi A5",
+        "fuel" -> "gasoline",
+        "price" -> 6000)))
+
+      updateResponse.status must equalTo(OK).setMessage(updateResponse.body)
+
+      val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
+
+      val json = Json.parse(response.body)
+
+      (json \ "title").as[String] must equalTo("Audi A5")
+      (json \ "fuel").as[String] must equalTo("gasoline")
+      (json \ "price").as[Int] must equalTo(6000)
+
+    }
+
   }
+
 }
