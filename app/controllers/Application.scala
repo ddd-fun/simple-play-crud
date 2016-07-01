@@ -10,8 +10,8 @@ object Application extends Controller {
   }
 
 
-  def addAdvert = Action{ request =>
-    NotImplemented
+  def addAdvert = Action(BodyParsers.parse.json){ request =>
+    Ok(request.body)
   }
 
 
