@@ -7,11 +7,12 @@ import play.api.libs.functional.syntax._
 
 object Application extends Controller {
 
-  implicit val advertReads: Reads[Advert] = (
-                   (JsPath \ "guid").read[String] and
+  private val inMemoryDb = scala.collection.mutable.Map.empty[String, AddAdvertRequest]
+
+  implicit val advertReads: Reads[AddAdvertRequest] = (
                    (JsPath \ "title").read[String] and
                    (JsPath \ "fuel").read[String]
-  )(Advert.apply _)
+  )(AddAdvertRequest.apply _)
 
 
   def index = Action {
@@ -20,13 +21,20 @@ object Application extends Controller {
 
 
   def addAdvert = Action(BodyParsers.parse.json){ request =>
-    request.body.validate[Advert] match  {
-      case JsSuccess(advert, _) =>  Ok(Json.obj("guid" -> advert.guid))
+    request.body.validate[AddAdvertRequest] match  {
+      case JsSuccess(advert, _) =>  {  val guid = store(advert); Ok(Json.obj("guid" -> guid)) }
       case errors : JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
     }
   }
 
+  def store(advert: AddAdvertRequest) : String = {
+    val guid = genGUID;
+    inMemoryDb += (guid -> advert)
+    guid
+  }
+
+  def genGUID = java.util.UUID.randomUUID.toString
 
 }
 
-case class Advert(guid:String, title:String, fuel:String)
+case class AddAdvertRequest(title:String, fuel:String)
