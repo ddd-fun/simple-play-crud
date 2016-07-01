@@ -9,9 +9,8 @@ import play.api.test._
 @RunWith(classOf[JUnitRunner])
 class ApplicationSpec extends PlaySpecification {
 
-  var PORT_9000 = 9000
-  val LOCAL_HOST = "http://localhost:"
-  val APP_URL = LOCAL_HOST + PORT_9000
+  val PORT_9000 = 9000
+  val APP_URL = "http://localhost:" + PORT_9000
 
   "Application" should {
 
