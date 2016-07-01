@@ -11,8 +11,16 @@ object Application extends Controller {
 
   implicit val advertReads: Reads[AddAdvertRequest] = (
                    (JsPath \ "title").read[String] and
-                   (JsPath \ "fuel").read[String]
+                   (JsPath \ "fuel").read[String] and
+                   (JsPath \ "price").read[Int]
   )(AddAdvertRequest.apply _)
+
+
+  implicit val advertWrites: Writes[AddAdvertRequest] = (
+     (JsPath \ "title").write[String] and
+     (JsPath \ "fuel").write[String] and
+     (JsPath \ "price").write[Int]
+  )(unlift(AddAdvertRequest.unapply))
 
 
   def index = Action {
@@ -27,6 +35,15 @@ object Application extends Controller {
     }
   }
 
+  def getAdvert(guid: String) = Action {
+    inMemoryDb.get(guid) match {
+      case Some(adv) => Ok(Json.toJson[AddAdvertRequest](adv))
+      case _=> NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found"))
+    }
+  }
+
+
+
   def store(advert: AddAdvertRequest) : String = {
     val guid = genGUID;
     inMemoryDb += (guid -> advert)
@@ -37,4 +54,4 @@ object Application extends Controller {
 
 }
 
-case class AddAdvertRequest(title:String, fuel:String)
+case class AddAdvertRequest(title:String, fuel:String, price:Int)
