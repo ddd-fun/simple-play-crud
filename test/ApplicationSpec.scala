@@ -24,10 +24,11 @@ class ApplicationSpec extends PlaySpecification {
       response.body must contain("Your new application is ready.")
     }
 
-    "add advert echo request" in new WithServer(port=PORT_9000){
+    "add advert and return guid" in new WithServer(port=PORT_9000){
 
       val response = await(WS.url(APP_URL+"/adverts")
                     .post(Json.obj("guid"-> "1231456789",
+                                   "title" -> "Audi A4",
                                    "fuel"-> "diesel",
                                    "price" -> "5000")))
 
@@ -36,8 +37,7 @@ class ApplicationSpec extends PlaySpecification {
       val json = Json.parse(response.body)
 
       (json \ "guid").as[String] must equalTo("1231456789")
-      (json \ "fuel").as[String] must equalTo("diesel")
-      (json \ "price").as[String] must equalTo("5000")
+
     }
   }
 }
