@@ -1,8 +1,11 @@
 package controllers
 
 import play.api._
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import play.api.mvc._
+import play.api.libs.json._
+import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
 class Application extends Controller{
@@ -11,10 +14,10 @@ class Application extends Controller{
 
   implicit val advertReads: Reads[AdvertInfo] = (
                    (JsPath \ "guid").read[String] and
-                   (JsPath \ "title").read[String] and
+                   (JsPath \ "title").read[String](minLength[String](2) keepAnd maxLength[String](32)) and
                    (JsPath \ "fuel").read[String] and
-                   (JsPath \ "price").read[Int]
-  )(AdvertInfo.apply _)
+                   (JsPath \ "price").read[Int](min(0) keepAnd max(5000000))
+    )(AdvertInfo.apply _)
 
 
   implicit val advertWrites: Writes[AdvertInfo] = (
