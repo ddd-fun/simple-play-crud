@@ -1,7 +1,6 @@
 import org.specs2.runner._
 import org.junit.runner._
-import play.api.http.Writeable
-import play.api.libs.json.{JsPath, Json}
+import play.api.libs.json.{JsObject, JsPath, Json}
 
 import play.api.libs.ws._
 import play.api.test._
@@ -25,18 +24,9 @@ class ApplicationSpec extends PlaySpecification {
     }
 
     "add advert and return guid" in new WithServer(port = PORT_9000) {
-
-      val response = await(WS.url(APP_URL + "/adverts")
-        .post(Json.obj("title" -> "Audi A4",
-        "fuel" -> "diesel",
-        "price" -> 5000)))
-
-      response.status must equalTo(OK).setMessage(response.body)
-
-      val json = Json.parse(response.body)
-
-      (json \ "guid").as[String] must not empty
-
+      withSavedAdvert { (json, guid) =>
+         guid must not empty
+      }
     }
 
     "return not found for unknown advert" in new WithServer(port = PORT_9000) {
@@ -51,57 +41,61 @@ class ApplicationSpec extends PlaySpecification {
 
 
     "return stored advert by guid" in new WithServer(port = PORT_9000) {
+      withSavedAdvert { (json, guid) =>
 
-      val addResponse = await(WS.url(APP_URL + "/adverts")
-        .post(Json.obj("title" -> "Audi A4",
-        "fuel" -> "diesel",
-        "price" -> 5000)))
+        val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
 
-      addResponse.status must equalTo(OK)
+        response.status must equalTo(OK).setMessage(response.body)
 
-      val guid = (Json.parse(addResponse.body) \ "guid").as[String]
+        val responseJson = Json.parse(response.body)
 
-      val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
-
-      response.status must equalTo(OK).setMessage(response.body)
-
-      val json = Json.parse(response.body)
-
-      (json \ "title").as[String] must equalTo("Audi A4")
-      (json \ "fuel").as[String] must equalTo("diesel")
-      (json \ "price").as[Int] must equalTo(5000)
-
+        (responseJson \ "title").as[String] must equalTo( (json \ "title").as[String] )
+        (responseJson \ "fuel").as[String] must equalTo( (json \ "fuel").as[String] )
+        (responseJson \ "price").as[Int] must equalTo( (json \ "price").as[Int])
+     }
     }
 
 
     "update stored advert" in new WithServer(port = PORT_9000) {
+      withSavedAdvert { (json, guid) =>
 
-      val addResponse = await(WS.url(APP_URL + "/adverts")
-        .post(Json.obj("title" -> "Audi A4",
-        "fuel" -> "diesel",
-        "price" -> 5000)))
+        val updateResponse = await(WS.url(APP_URL + s"/adverts/$guid")
+                                     .put(Json.obj("title" -> "Audi A5",
+                                     "fuel" -> "gasoline",
+                                     "price" -> 6000)))
 
-      addResponse.status must equalTo(OK)
+        updateResponse.status must equalTo(OK).setMessage(updateResponse.body)
 
-      val guid = (Json.parse(addResponse.body) \ "guid").as[String]
+        val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
 
-      val updateResponse = await(WS.url(APP_URL + s"/adverts/$guid")
-        .put(Json.obj("title" -> "Audi A5",
-        "fuel" -> "gasoline",
-        "price" -> 6000)))
+        val json = Json.parse(response.body)
 
-      updateResponse.status must equalTo(OK).setMessage(updateResponse.body)
+        (json \ "title").as[String] must equalTo("Audi A5")
+        (json \ "fuel").as[String] must equalTo("gasoline")
+        (json \ "price").as[Int] must equalTo(6000)
 
-      val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
-
-      val json = Json.parse(response.body)
-
-      (json \ "title").as[String] must equalTo("Audi A5")
-      (json \ "fuel").as[String] must equalTo("gasoline")
-      (json \ "price").as[Int] must equalTo(6000)
-
+      }
     }
+  }
+
+
+  def withSavedAdvert(testFragment: (JsObject, String) => Any) {
+
+    import play.api.Play.current
+
+    val advert = Json.obj("title" -> "Audi A4",
+                          "fuel" -> "diesel",
+                          "price" -> 5000)
+
+    val addResponse = await(WS.url(APP_URL + "/adverts").post(advert))
+
+    addResponse.status must equalTo(OK)
+
+    val guid = (Json.parse(addResponse.body) \ "guid").as[String]
+
+    testFragment(advert, guid) // execute fragment in context of stored advert
 
   }
+
 
 }
