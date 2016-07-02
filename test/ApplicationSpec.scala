@@ -93,6 +93,16 @@ class ApplicationSpec extends PlaySpecification {
     }
 
 
+    "get all stored adverts" in new WithServer(port = PORT_9000) {
+      withSavedAdvert { (json, guid) =>
+
+        val getAllResponse = await(WS.url(APP_URL + "/adverts").get)
+
+        getAllResponse.status must equalTo(NOT_FOUND).setMessage(getAllResponse.body)
+
+      }
+    }
+
   }
 
 
