@@ -1,7 +1,8 @@
-import play.api.libs.json.{Json}
+package fast
+
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test._
-import scala.concurrent.Future
 
 object DetailedAppSpec extends PlaySpecification with Results  {
 
