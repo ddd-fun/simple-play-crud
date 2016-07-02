@@ -61,6 +61,14 @@ object Application extends Controller {
     }
   }
 
+  def getAllAdverts = Action {
+    Ok(Json.obj("adverts" -> getAll))
+  }
+
+
+  def getAll: List[AdvertInfo] =
+    inMemoryDb.values.foldLeft(List[AdvertInfo]())((l,info) => info :: l)
+
 
   def get(guid:String): Either[String, AdvertInfo] = {
     inMemoryDb.get(guid) match {

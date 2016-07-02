@@ -1,6 +1,6 @@
 import org.specs2.runner._
 import org.junit.runner._
-import play.api.libs.json.{JsObject, JsPath, Json}
+import play.api.libs.json._
 
 import play.api.libs.ws._
 import play.api.test._
@@ -92,13 +92,19 @@ class ApplicationSpec extends PlaySpecification {
       }
     }
 
-
-    "get all stored adverts" in new WithServer(port = PORT_9000) {
+    "return all stored adverts" in new WithServer(port = PORT_9000) {
       withSavedAdvert { (json, guid) =>
 
         val getAllResponse = await(WS.url(APP_URL + "/adverts").get)
 
-        getAllResponse.status must equalTo(NOT_FOUND).setMessage(getAllResponse.body)
+        getAllResponse.status must equalTo(OK).setMessage(getAllResponse.body)
+
+        val json = Json.parse(getAllResponse.body)
+
+        (json  \ "adverts" ).toEither match {
+          case Right(JsArray(seq)) => seq.size must be greaterThan 0
+          case fail@ _ => failure("failed to parse replay: " +fail)
+        }
 
       }
     }

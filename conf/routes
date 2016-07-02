@@ -9,6 +9,7 @@ GET         /                     controllers.Application.index
 GET         /assets/*file         controllers.Assets.at(path="/public", file)
 
 
+GET         /adverts              controllers.Application.getAllAdverts
 GET         /adverts/:guid        controllers.Application.getAdvert(guid: String)
 POST        /adverts              controllers.Application.addAdvert
 PUT         /adverts/:guid        controllers.Application.editAdvert(guid: String)
