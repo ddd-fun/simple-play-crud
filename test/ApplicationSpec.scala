@@ -25,7 +25,7 @@ class ApplicationSpec extends PlaySpecification {
 
     "add advert and return guid" in new WithServer(port = PORT_9000) {
       withSavedAdvert { (json, guid) =>
-         guid must not empty
+         guid must not be empty
       }
     }
 
@@ -61,6 +61,7 @@ class ApplicationSpec extends PlaySpecification {
 
         val updateResponse = await(WS.url(APP_URL + s"/adverts/$guid")
                                      .put(Json.obj(
+                                     "guid" -> guid,
                                      "title" -> "Audi A5",
                                      "fuel" -> "gasoline",
                                      "price" -> 6000)))
@@ -111,20 +112,22 @@ class ApplicationSpec extends PlaySpecification {
 
   }
 
-
   def withSavedAdvert(testFragment: (JsObject, String) => Any) {
 
     import play.api.Play.current
 
-    val advert = Json.obj("title" -> "Audi A4",
+    val guid = java.util.UUID.randomUUID.toString
+
+    val advert = Json.obj("guid" -> guid,
+                          "title" -> "Audi A4",
                           "fuel" -> "diesel",
                           "price" -> 5000)
 
     val addResponse = await(WS.url(APP_URL + "/adverts").post(advert))
 
-    addResponse.status must equalTo(OK)
+    addResponse.status must equalTo(OK).setMessage(addResponse.body)
 
-    val guid = (Json.parse(addResponse.body) \ "guid").as[String]
+    (Json.parse(addResponse.body) \ "guid").as[String] must equalTo(guid)
 
     testFragment(advert, guid) // execute fragment in context of stored advert
 

@@ -10,6 +10,7 @@ object Application extends Controller {
   private val inMemoryDb = scala.collection.mutable.Map.empty[String, AdvertInfo]
 
   implicit val advertReads: Reads[AdvertInfo] = (
+                   (JsPath \ "guid").read[String] and
                    (JsPath \ "title").read[String] and
                    (JsPath \ "fuel").read[String] and
                    (JsPath \ "price").read[Int]
@@ -17,6 +18,7 @@ object Application extends Controller {
 
 
   implicit val advertWrites: Writes[AdvertInfo] = (
+     (JsPath \ "guid").write[String] and
      (JsPath \ "title").write[String] and
      (JsPath \ "fuel").write[String] and
      (JsPath \ "price").write[Int]
@@ -30,7 +32,11 @@ object Application extends Controller {
 
   def addAdvert = Action(BodyParsers.parse.json){ request =>
     request.body.validate[AdvertInfo] match  {
-      case JsSuccess(advert, _) =>  {  val guid = save(advert); Ok(Json.obj("guid" -> guid)) }
+      case JsSuccess(advert, _) =>  { save(advert) match {
+          case Right(guid) => Ok(Json.obj("guid" -> guid))
+          case Left(msg) => BadRequest(Json.obj("status" -> "KO", "message" -> msg))
+        }
+      }
       case errors : JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
     }
   }
@@ -77,10 +83,11 @@ object Application extends Controller {
     }
   }
 
-  def save(advert: AdvertInfo) : String = {
-    val guid = genGUID;
-    inMemoryDb += (guid -> advert)
-    guid
+  def save(advert: AdvertInfo) : Either[String, String] = {
+    inMemoryDb.get(advert.guid) match {
+      case None => inMemoryDb += (advert.guid -> advert); Right(advert.guid)
+      case Some(a) => val guid = advert.guid; Left(s"advert with guid=$guid already exist")
+    }
   }
   
   def update(guid:String, advert: AdvertInfo): Either[String, AdvertInfo] = {
@@ -97,8 +104,7 @@ object Application extends Controller {
     }
   }
 
-  def genGUID = java.util.UUID.randomUUID.toString
 
 }
 
-case class AdvertInfo(title:String, fuel:String, price:Int)
+case class AdvertInfo(guid:String, title:String, fuel:String, price:Int)
