@@ -60,7 +60,8 @@ class ApplicationSpec extends PlaySpecification {
       withSavedAdvert { (json, guid) =>
 
         val updateResponse = await(WS.url(APP_URL + s"/adverts/$guid")
-                                     .put(Json.obj("title" -> "Audi A5",
+                                     .put(Json.obj(
+                                     "title" -> "Audi A5",
                                      "fuel" -> "gasoline",
                                      "price" -> 6000)))
 
@@ -76,6 +77,22 @@ class ApplicationSpec extends PlaySpecification {
 
       }
     }
+
+    "delete stored advert" in new WithServer(port = PORT_9000) {
+      withSavedAdvert { (json, guid) =>
+
+        val deleteResponse = await(WS.url(APP_URL + s"/adverts/$guid").delete)
+
+        deleteResponse.status must equalTo(OK).setMessage(deleteResponse.body)
+
+        val response = await(WS.url(APP_URL + s"/adverts/$guid").get)
+
+        response.status must equalTo(NOT_FOUND)
+
+      }
+    }
+
+
   }
 
 
