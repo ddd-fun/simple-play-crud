@@ -13,10 +13,10 @@ class Application extends Controller{
   private val inMemoryDb = scala.collection.mutable.Map.empty[String, AdvertInfo]
 
   implicit val advertReads: Reads[AdvertInfo] = (
-                   (JsPath \ "guid").read[String] and
-                   (JsPath \ "title").read[String](minLength[String](2) keepAnd maxLength[String](32)) and
-                   (JsPath \ "fuel").read[String] and
-                   (JsPath \ "price").read[Int](min(0) keepAnd max(5000000))
+     (JsPath \ "guid").read[String] and
+     (JsPath \ "title").read[String](minLength[String](2) keepAnd maxLength[String](32)) and
+     (JsPath \ "fuel").read[String](fuelValidator(List("diesel", "gasoline"))) and
+     (JsPath \ "price").read[Int](min(0) keepAnd max(5000000))
     )(AdvertInfo.apply _)
 
 
@@ -27,6 +27,8 @@ class Application extends Controller{
      (JsPath \ "price").write[Int]
   )(unlift(AdvertInfo.unapply))
 
+  def fuelValidator(allowed:List[String]) =
+    Reads.of[String].filter(ValidationError("allowed only "+allowed))(allowed.contains)
 
   def index = Action {
     Ok(views.html.index("Your new application is ready."))

@@ -21,6 +21,10 @@ object DomainGen{
   val validPriceGen = Gen.choose(0 , 5000000)
 
   val invalidPriceGen = Gen.oneOf(Gen.choose(-100 , -1), Gen.choose(5000000, 6000000))
+
+  val validFuelGen = Gen.oneOf("diesel", "gasoline")
+
+  val invalidFuelGen = Gen.alphaStr suchThat (str => !List("diesel, gasoline").contains(str))
 }
 
 
@@ -52,8 +56,8 @@ object ControllerSpec extends Properties("Controller") {
   val seedOfInvalidJsonGen: Gen[(JsObject, Int)] = for{
     (guid, g) <- Gen.uuid.map(id => (id.toString, 1))
     (title, t) <- Gen.oneOf(validTitleGen.map((_,1)), inValidTitleGen.map((_,0)))
-    (fuel, f) <- Gen.oneOf("diesel", "gasoline").map((_,1))
-    (price, p) <- Gen.oneOf( validPriceGen.map((_,1)), invalidPriceGen.map((_,0)) )
+    (fuel, f) <- Gen.oneOf(validFuelGen.map((_,1)), invalidFuelGen.map((_,0)))
+    (price, p) <- Gen.oneOf(validPriceGen.map((_,1)), invalidPriceGen.map((_,0)) )
   }yield ((Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price),  g*t*f*p))
 
   val invalidJsonGen = seedOfInvalidJsonGen suchThat( _._2 != 1) map (_._1)
