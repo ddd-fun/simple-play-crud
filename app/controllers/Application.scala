@@ -5,7 +5,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import play.api.libs.functional.syntax._
 
-object Application extends Controller {
+class Application extends Controller{
 
   private val inMemoryDb = scala.collection.mutable.Map.empty[String, AdvertInfo]
 
@@ -108,3 +108,5 @@ object Application extends Controller {
 }
 
 case class AdvertInfo(guid:String, title:String, fuel:String, price:Int)
+
+object Application extends Application
