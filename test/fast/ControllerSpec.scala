@@ -70,28 +70,24 @@ object ControllerSpec extends Properties("Controller") {
     body =  json
   )
 
+  def callAddAdvert(req:FakeRequest[JsObject]) = TestApplicationController.addAdvert.apply(req)
+  
   property("return 400 bad request if json contains fields with invalid name") =
-    forAll(jsonWithInvalidFieldsNameGen.map(genFakeRequest)) { req =>
+    forAll(jsonWithInvalidFieldsNameGen.map(genFakeRequest).map(callAddAdvert)) { response =>
 
-    val result = TestApplicationController.addAdvert.apply(req)
-
-    status(result).equals(BAD_REQUEST) &&  (Json.parse(contentAsString(result) ) \ "status").as[String] == "KO"
+    status(response).equals(BAD_REQUEST) &&  (Json.parse(contentAsString(response) ) \ "status").as[String] == "KO"
   }
 
   property("return 200 for valid request") =
-    forAll(advertValidJsonGen.map(genFakeRequest)) { req =>
+    forAll(advertValidJsonGen.map(genFakeRequest).map(callAddAdvert)) { response =>
 
-    val result = TestApplicationController.addAdvert.apply(req)
-
-    status(result).equals(OK)
+    status(response).equals(OK)
   }
 
   property("return 400 bad request if some field contains invalid value") =
-    forAll(invalidJsonGen.map(genFakeRequest)) { req =>
+    forAll(invalidJsonGen.map(genFakeRequest).map(callAddAdvert)) { response =>
 
-    val result = TestApplicationController.addAdvert.apply(req)
-
-    status(result).equals(BAD_REQUEST)  && (Json.parse(contentAsString(result) ) \ "status").as[String] == "KO"
+    status(response).equals(BAD_REQUEST)  && (Json.parse(contentAsString(response) ) \ "status").as[String] == "KO"
   }
 
 
