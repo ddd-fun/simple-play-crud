@@ -36,12 +36,11 @@ object ControllerValidationSpec extends Properties("Controller validations") {
 
   object TestApplicationController extends controllers.Application
 
-
   import DomainDataGen._
 
   def anyExcept(exclude: String) = Gen.alphaStr suchThat(str => str.length > 0 && str != exclude)
 
-  val jsonWithInvalidFieldsNameGen = for{
+  val jsonWithInvalidFieldNamesGen = for{
     guid <- anyExcept("guid")
     title <- anyExcept("title")
     price <- anyExcept("price")
@@ -49,12 +48,12 @@ object ControllerValidationSpec extends Properties("Controller validations") {
   }yield (Json.obj(guid -> "guid", title -> "title", fuel -> "fuel", "price" -> 1))
 
 
-  val advertValidJsonGen = for{
+  val validJsonGen = for{
     guid <- Gen.uuid.map(_.toString)
     title <- validTitleGen
     fuel <- Gen.oneOf("diesel", "gasoline")
     price <- Gen.choose(0, 5000000)
-    usage <- Gen.option(usageJsonGen)
+    usage <- Gen.option(validUsageJsonGen)
   }yield {val json = Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price)
           usage.map(json++).getOrElse(json) }
 
@@ -67,7 +66,7 @@ object ControllerValidationSpec extends Properties("Controller validations") {
   }yield ((Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price),
            g*t*f*p))) suchThat( _._2 != 1) map (_._1)
 
-   val usageJsonGen: Gen[JsObject] = for{
+   val validUsageJsonGen: Gen[JsObject] = for{
     m <- validMileageGen
     reg <- validFirstRegGen
   }yield (Json.obj("usage" -> Json.obj("mileage"->m, "firstReg" -> reg)))
@@ -81,23 +80,22 @@ object ControllerValidationSpec extends Properties("Controller validations") {
   ){override def toString = s"$method $uri body: $body"}
 
 
-  property("return 400 bad request if json contains fields with invalid name") =
-    forAll(jsonWithInvalidFieldsNameGen.map(genFakeRequest)) { req =>
+  property("return 400 if any of json fields has invalid name") =
+    forAll(jsonWithInvalidFieldNamesGen.map(genFakeRequest)) { req =>
     val response = TestApplicationController.addAdvert.apply(req)
     status(response).equals(BAD_REQUEST) &&  (Json.parse(contentAsString(response) ) \ "status").as[String] == "KO"
   }
 
-  property("return 200 for valid request") =
-    forAll(advertValidJsonGen.map(genFakeRequest)) { req =>
-    val response = TestApplicationController.addAdvert.apply(req)
-    status(response).equals(OK)
-  }
-
-  property("return 400 bad request if some field contains invalid value") =
-    forAll(invalidJsonGen.map(genFakeRequest)) { req =>
+  property("return 400 if some json field contains invalid value") =
+  forAll(invalidJsonGen.map(genFakeRequest)) { req =>
     val response = TestApplicationController.addAdvert.apply(req)
     status(response).equals(BAD_REQUEST)  && (Json.parse(contentAsString(response) ) \ "status").as[String] == "KO"
   }
 
+  property("return 200 for valid request") =
+    forAll(validJsonGen.map(genFakeRequest)) { req =>
+      val response = TestApplicationController.addAdvert.apply(req)
+      status(response).equals(OK)
+  }
 
 }
