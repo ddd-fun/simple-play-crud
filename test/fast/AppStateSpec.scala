@@ -1,24 +1,19 @@
 package fast
 
-
 import org.scalacheck.{Prop, Gen}
-import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.commands.Commands
-import play.api.libs.json.JsObject
 import play.api.test.{FakeHeaders, FakeRequest}
-
 import scala.concurrent.Future
-import scala.util.{Try, Success}
-import scala.collection.immutable.Map
+import scala.util.{Try}
 import play.api.test.Helpers._
 
-object AppStateProperties extends org.scalacheck.Properties("Advert app state") {
+object AppStateProperties extends org.scalacheck.Properties("Application") {
 
-  property("state property") = AppStateSpec.property()
+  property("state transitions") = AppStateSpec.property()
 
 }
 
-object AppStateSpec extends Commands{
+object AppStateSpec extends Commands with DomainDataGen{
 
   object TestApplication extends controllers.Application
 
@@ -38,9 +33,7 @@ object AppStateSpec extends Commands{
 
   def newSut(state: State): Sut = TestApplication
 
-  import ControllerValidationSpec._
   import play.api.libs.json._
-  import DomainDataGen._
 
   def genCommand(state: State): Gen[AppStateSpec.Command] = {
     Gen.frequency((10, genStoreAdvert),
@@ -70,11 +63,19 @@ object AppStateSpec extends Commands{
     Gen.oneOf(state.map.toSeq).flatMap(id => validJsonGen.map(UpdateStoredAdvert(id, _)) )
 
 
+  def fakeRequest(method:String, json:JsObject) = new FakeRequest(
+    method = method, uri = "/adverts",
+    headers = FakeHeaders(Seq("Content-type"->"application/json")),
+    body =  json
+  ){override def toString = s"$method $uri body: $body"}
+
+
+
   case class AddAdvert(id: String, jsObject: JsObject) extends Command {
 
     type Result = Future[play.api.mvc.Result]
 
-    def run(sut: Sut) = sut.addAdvert.apply(genFakeRequest(jsObject))
+    def run(sut: Sut) = sut.addAdvert.apply(fakeRequest("POST", jsObject))
 
     def preCondition(state: State) = !state.map.contains(id)
 
@@ -150,7 +151,7 @@ object AppStateSpec extends Commands{
 
     type Result = Future[play.api.mvc.Result]
 
-    def run(sut: Sut) = sut.editAdvert(id).apply(genFakeRequest(jsObject))
+    def run(sut: Sut) = sut.editAdvert(id).apply(fakeRequest("PUT", jsObject))
 
     def preCondition(state: State) = state.map.contains(id)
 

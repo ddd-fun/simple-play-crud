@@ -7,9 +7,7 @@ import play.api.libs.ws._
 import play.api.test._
 
 
-
-@RunWith(classOf[JUnitRunner])
-class AppSkeletonSpec extends PlaySpecification {
+object AppSkeletonSpec extends PlaySpecification {
 
   val PORT_9000 = 9000
   val APP_URL = "http://localhost:" + PORT_9000
