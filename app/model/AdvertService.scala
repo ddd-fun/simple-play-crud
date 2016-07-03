@@ -23,6 +23,8 @@ trait AdvertService[Advert, Id] extends Repository[Advert, Id] {
 
 trait Repository[Advert, Id] {
 
+  def getAll : List[Advert]
+
   def saveOrUpdate(advert: Advert) : Option[Advert]
 
   def remove(advert: Advert) : Option[Advert]

@@ -1,5 +1,6 @@
 package controllers
 
+import model.{CarUsage, AdvertInfo}
 import play.api._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -40,7 +41,8 @@ class Application extends Controller{
   )(unlift(AdvertInfo.unapply))
 
 
-  def dateValidator = Reads.pattern("((19|20)\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01]) ?([0-1][0-9]|2[0-3]):([0-5][0-9])".r, "error.date:yyyy/mm/dd HH:MM")
+  def dateValidator = Reads.pattern("((19|20)\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01]) ?([0-1][0-9]|2[0-3]):([0-5][0-9])".r,
+    "error.date:yyyy/mm/dd HH:MM")
 
   def fuelValidator(allowed:List[String]) =
     Reads.of[String].filter(ValidationError("allowed only "+allowed))(allowed.contains)
@@ -126,8 +128,5 @@ class Application extends Controller{
 
 
 }
-
-case class AdvertInfo(guid:String, title:String, fuel:String, price:Int, usage: Option[CarUsage])
-case class CarUsage(mileage:Int, firstReg:String)
 
 object Application extends Application
