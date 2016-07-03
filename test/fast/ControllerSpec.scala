@@ -8,6 +8,8 @@ import play.api.test.{FakeHeaders, FakeRequest}
 
 object DomainDataGen{
 
+  val validIdGen = Gen.uuid.map(_.toString);
+
   val validTitleGen = for {
     length <- Gen.choose(2 ,32)
     str    <- Gen.listOfN(length, Gen.alphaChar).map(_.mkString)
@@ -49,7 +51,7 @@ object ControllerValidationSpec extends Properties("Controller validations") {
 
 
   val validJsonGen = for{
-    guid  <- Gen.uuid.map(_.toString)
+    guid  <- validIdGen
     title <- validTitleGen
     fuel  <- validFuelGen
     price <- validPriceGen
