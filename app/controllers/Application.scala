@@ -40,7 +40,7 @@ class Application extends Controller{
   )(unlift(AdvertInfo.unapply))
 
 
-  def dateValidator = Reads.pattern("(0?[1-9]|[12][0-9]|3[01])/(0?[1-9]|1[012])/((19|20)\\d\\d)".r, "error.date:dd/mm/yyyy")
+  def dateValidator = Reads.pattern("((19|20)\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01]) ?([0-1][0-9]|2[0-3]):([0-5][0-9])".r, "error.date:yyyy/mm/dd HH:MM")
 
   def fuelValidator(allowed:List[String]) =
     Reads.of[String].filter(ValidationError("allowed only "+allowed))(allowed.contains)

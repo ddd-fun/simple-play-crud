@@ -26,7 +26,7 @@ object DomainGen{
 
   val invalidFuelGen = Gen.alphaStr suchThat (str => !List("diesel, gasoline").contains(str))
 
-  val validFirstRegGen = Gen.oneOf("25/01/1900", "29/02/2014", "31/12/2036")
+  val validFirstRegGen = Gen.oneOf("1900-01-25 00:00", "2014-02-29 23:59", "2036-12-31 00:00")
 
   val validMileageGen = Gen.choose(1, 30000000)
 }
