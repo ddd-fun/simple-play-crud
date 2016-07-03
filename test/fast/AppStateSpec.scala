@@ -7,13 +7,13 @@ import scala.concurrent.Future
 import scala.util.{Try}
 import play.api.test.Helpers._
 
-object AppStateProperties extends org.scalacheck.Properties("Application") {
+object AppStateSpec extends org.scalacheck.Properties("Application") {
 
-  property("state transitions") = AppStateSpec.property()
+  property("state transitions") = AppStateTransitions.property()
 
 }
 
-object AppStateSpec extends Commands with DomainDataGen{
+object AppStateTransitions extends Commands with DomainDataGen{
 
   object TestApplication extends controllers.Application
 
@@ -35,7 +35,7 @@ object AppStateSpec extends Commands with DomainDataGen{
 
   import play.api.libs.json._
 
-  def genCommand(state: State): Gen[AppStateSpec.Command] = {
+  def genCommand(state: State): Gen[AppStateTransitions.Command] = {
     Gen.frequency((10, genStoreAdvert),
                   (10, genGetStoredAdvert(state)),
                   (1,  genGetNotExistedAdvert(state)),
