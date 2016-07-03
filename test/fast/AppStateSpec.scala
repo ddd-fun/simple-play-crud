@@ -1,5 +1,6 @@
 package fast
 
+import model.ServiceInterpreter
 import org.scalacheck.{Prop, Gen}
 import org.scalacheck.commands.Commands
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -15,7 +16,7 @@ object AppStateSpec extends org.scalacheck.Properties("Application") {
 
 object AppStateTransitions extends Commands with DomainDataGen{
 
-  object TestApplication extends controllers.Application
+  object TestApplication extends controllers.Application(ServiceInterpreter)
 
   case class State(map:Set[String])
 
@@ -151,7 +152,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
     type Result = Future[play.api.mvc.Result]
 
-    def run(sut: Sut) = sut.editAdvert(id).apply(fakeRequest("PUT", jsObject))
+    def run(sut: Sut) = sut.updateAdvert(id).apply(fakeRequest("PUT", jsObject))
 
     def preCondition(state: State) = state.map.contains(id)
 

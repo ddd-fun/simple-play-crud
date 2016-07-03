@@ -1,6 +1,6 @@
 package controllers
 
-import model.{CarUsage, AdvertInfo}
+import model.{ServiceInterpreter, AdvertService, CarUsage, AdvertInfo}
 import play.api._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -9,10 +9,7 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
-class Application extends Controller{
-
-  private val inMemoryDb = scala.collection.mutable.Map.empty[String, AdvertInfo]
-
+class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
 
   implicit val usageReads: Reads[CarUsage] = (
       (JsPath \ "mileage").read[Int](min(1) keepAnd max(30000000)) and
@@ -51,82 +48,43 @@ class Application extends Controller{
     Ok(views.html.index("Your new application is ready."))
   }
 
+  def advertNotFoundJson(guid:String) = Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found")
 
   def addAdvert = Action(BodyParsers.parse.json){ request =>
     request.body.validate[AdvertInfo] match  {
-      case JsSuccess(advert, _) =>  { save(advert) match {
-          case Right(guid) => Ok(Json.obj("guid" -> guid))
-          case Left(msg) => BadRequest(Json.obj("status" -> "KO", "message" -> msg))
-        }
+      case JsSuccess(advert, _) =>  { 
+        val guid = advert.guid
+        service.store(guid, advert).map(_=> Ok(Json.obj("guid" -> advert.guid)))
+          .getOrElse(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))) 
       }
       case errors : JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
     }
   }
 
   def getAdvert(guid: String) = Action {
-    get(guid) match {
-      case Right(adv) => Ok(Json.toJson[AdvertInfo](adv))
-      case _=> NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found"))
-    }
+    service.get(guid).map(adv => Ok(Json.toJson[AdvertInfo](adv)))
+      .getOrElse(NotFound(advertNotFoundJson(guid))) 
   }
 
 
-  def editAdvert(guid: String) = Action(BodyParsers.parse.json) { request =>
+  def updateAdvert(guid: String) = Action(BodyParsers.parse.json) { request =>
     request.body.validate[AdvertInfo] match {
-      case JsSuccess(advert, _) =>
-          update(guid, advert) match {
-            case Right(_) => Ok
-            case Left(msg) => NotFound(Json.obj("status" -> "KO", "message" -> msg))
-          }
+      case JsSuccess(advert, _) => service.update(guid, advert).map(_=>Ok)
+                                    .getOrElse(NotFound(advertNotFoundJson(guid)))
       case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
      }
   }
 
   def deleteAdvert(guid: String) = Action {
-    delete(guid) match {
-       case Right(_) => Ok
-       case Left(msg) => NotFound(Json.obj("status" -> "KO", "message" -> msg))
-    }
+   service.delete(guid).map(_=>Ok)
+     .getOrElse(NotFound(advertNotFoundJson(guid))) 
   }
 
   def getAllAdverts = Action {
-    Ok(Json.obj("adverts" -> getAll))
+    Ok(Json.obj("adverts" -> service.getAll))
   }
-
-
-  def getAll: List[AdvertInfo] =
-    inMemoryDb.values.foldLeft(List[AdvertInfo]())((l,info) => info :: l)
-
-
-  def get(guid:String): Either[String, AdvertInfo] = {
-    inMemoryDb.get(guid) match {
-      case Some(adv) =>  Right(adv)
-      case _ =>  Left(s"advert by guid=$guid is not found")
-    }
-  }
-
-  def save(advert: AdvertInfo) : Either[String, String] = {
-    inMemoryDb.get(advert.guid) match {
-      case None => inMemoryDb += (advert.guid -> advert); Right(advert.guid)
-      case Some(a) => val guid = advert.guid; Left(s"advert with guid=$guid already exist")
-    }
-  }
-
-  def update(guid:String, advert: AdvertInfo): Either[String, AdvertInfo] = {
-    inMemoryDb.get(guid) match {
-      case Some(_) =>  inMemoryDb += (guid -> advert); Right(advert)
-      case _ =>  Left(s"advert by guid=$guid is not found")
-    }
-  }
-
-  def delete(guid:String): Either[String, AdvertInfo] = {
-    inMemoryDb.get(guid) match {
-       case Some(adv) => inMemoryDb.remove(guid); Right(adv)
-       case _ =>  Left(s"advert by guid=$guid is not found")
-    }
-  }
-
+  
 
 }
 
-object Application extends Application
+object Application extends Application(ServiceInterpreter)

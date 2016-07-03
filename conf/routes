@@ -12,5 +12,5 @@ GET         /assets/*file         controllers.Assets.at(path="/public", file)
 GET         /adverts              controllers.Application.getAllAdverts
 GET         /adverts/:guid        controllers.Application.getAdvert(guid: String)
 POST        /adverts              controllers.Application.addAdvert
-PUT         /adverts/:guid        controllers.Application.editAdvert(guid: String)
+PUT         /adverts/:guid        controllers.Application.updateAdvert(guid: String)
 DELETE      /adverts/:guid        controllers.Application.deleteAdvert(guid: String)

@@ -18,7 +18,12 @@ trait AdvertService[Advert, Id] extends Repository[Advert, Id] {
     d <- remove(a)
   }yield d
 
-  def invert[A](o:Option[A]): Option[A]
+  def invert[A](o:Option[A]): Option[Unit] = {
+    o match {
+      case Some(_) => None
+      case None => Some(Unit)
+    }
+  }
 }
 
 trait Repository[Advert, Id] {

@@ -1,6 +1,7 @@
 package fast
 
 import fast.DetailedAppSpec._
+import model.ServiceInterpreter
 import org.scalacheck._
 import org.scalacheck.Prop.forAll
 import play.api.libs.json.{JsObject, Json}
@@ -9,7 +10,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 
 object AppValidationSpec extends Properties("Application") with DomainDataGen {
 
-  object TestApplicationController extends controllers.Application
+  object TestApplicationController extends controllers.Application(ServiceInterpreter)
    
   
   def fakePostAdvertRequest(json:JsObject) = new FakeRequest(

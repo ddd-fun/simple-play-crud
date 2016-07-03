@@ -1,5 +1,6 @@
 package fast
 
+import model.ServiceInterpreter
 import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test._
@@ -12,7 +13,7 @@ import play.api.test._
  */
 object DetailedAppSpec extends PlaySpecification with Results  {
 
-  class TestApplicationController() extends controllers.Application
+  class TestApplicationController() extends controllers.Application(ServiceInterpreter)
 
 
   "Application" should {
