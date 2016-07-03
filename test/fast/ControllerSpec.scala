@@ -59,16 +59,15 @@ object ControllerSpec extends Properties("Controller") {
           usage.map(json++).getOrElse(json) }
 
 
-  val seedOfInvalidJsonGen: Gen[(JsObject, Int)] = for{
+  val invalidJsonGen = (for{
     (guid, g) <- Gen.uuid.map(id => (id.toString, 1))
     (title, t) <- Gen.oneOf(validTitleGen.map((_,1)), inValidTitleGen.map((_,0)))
     (fuel, f) <- Gen.oneOf(validFuelGen.map((_,1)), invalidFuelGen.map((_,0)))
     (price, p) <- Gen.oneOf(validPriceGen.map((_,1)), invalidPriceGen.map((_,0)) )
-  }yield ((Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price),  g*t*f*p))
+  }yield ((Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price),
+           g*t*f*p))) suchThat( _._2 != 1) map (_._1)
 
-  val invalidJsonGen = seedOfInvalidJsonGen suchThat( _._2 != 1) map (_._1)
-
-  val usageJsonGen: Gen[JsObject] = for{
+   val usageJsonGen: Gen[JsObject] = for{
     m <- validMileageGen
     reg <- validFirstRegGen
   }yield (Json.obj("usage" -> Json.obj("mileage"->m, "firstReg" -> reg)))
