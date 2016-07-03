@@ -25,6 +25,10 @@ object DomainGen{
   val validFuelGen = Gen.oneOf("diesel", "gasoline")
 
   val invalidFuelGen = Gen.alphaStr suchThat (str => !List("diesel, gasoline").contains(str))
+
+  val validFirstRegGen = Gen.oneOf("25/01/1900", "29/02/2014", "31/12/2036")
+
+  val validMileageGen = Gen.choose(1, 30000000)
 }
 
 
@@ -50,7 +54,9 @@ object ControllerSpec extends Properties("Controller") {
     title <- validTitleGen
     fuel <- Gen.oneOf("diesel", "gasoline")
     price <- Gen.choose(0, 5000000)
-  }yield (Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price))
+    usage <- Gen.option(usageJsonGen)
+  }yield {val json = Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price)
+          usage.map(json++).getOrElse(json) }
 
 
   val seedOfInvalidJsonGen: Gen[(JsObject, Int)] = for{
@@ -61,32 +67,37 @@ object ControllerSpec extends Properties("Controller") {
   }yield ((Json.obj("guid" -> guid, "title" -> title, "fuel" -> fuel, "price" -> price),  g*t*f*p))
 
   val invalidJsonGen = seedOfInvalidJsonGen suchThat( _._2 != 1) map (_._1)
+
+  val usageJsonGen: Gen[JsObject] = for{
+    m <- validMileageGen
+    reg <- validFirstRegGen
+  }yield (Json.obj("usage" -> Json.obj("mileage"->m, "firstReg" -> reg)))
+
   
-  
-  def genFakeRequest(json:JsObject) = FakeRequest(
+  def genFakeRequest(json:JsObject) = new FakeRequest(
     method = "POST",
     uri = "/adverts",
     headers = FakeHeaders(Seq("Content-type"->"application/json")),
     body =  json
-  )
+  ){override def toString = s"$method $uri body: $body"}
 
   def callAddAdvert(req:FakeRequest[JsObject]) = TestApplicationController.addAdvert.apply(req)
   
   property("return 400 bad request if json contains fields with invalid name") =
-    forAll(jsonWithInvalidFieldsNameGen.map(genFakeRequest).map(callAddAdvert)) { response =>
-
+    forAll(jsonWithInvalidFieldsNameGen.map(genFakeRequest)) { req =>
+    val response = TestApplicationController.addAdvert.apply(req)
     status(response).equals(BAD_REQUEST) &&  (Json.parse(contentAsString(response) ) \ "status").as[String] == "KO"
   }
 
   property("return 200 for valid request") =
-    forAll(advertValidJsonGen.map(genFakeRequest).map(callAddAdvert)) { response =>
-
+    forAll(advertValidJsonGen.map(genFakeRequest)) { req =>
+    val response = TestApplicationController.addAdvert.apply(req)
     status(response).equals(OK)
   }
 
   property("return 400 bad request if some field contains invalid value") =
-    forAll(invalidJsonGen.map(genFakeRequest).map(callAddAdvert)) { response =>
-
+    forAll(invalidJsonGen.map(genFakeRequest)) { req =>
+    val response = TestApplicationController.addAdvert.apply(req)
     status(response).equals(BAD_REQUEST)  && (Json.parse(contentAsString(response) ) \ "status").as[String] == "KO"
   }
 

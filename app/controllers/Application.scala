@@ -12,20 +12,35 @@ class Application extends Controller{
 
   private val inMemoryDb = scala.collection.mutable.Map.empty[String, AdvertInfo]
 
-  implicit val advertReads: Reads[AdvertInfo] = (
-     (JsPath \ "guid").read[String] and
-     (JsPath \ "title").read[String](minLength[String](2) keepAnd maxLength[String](32)) and
-     (JsPath \ "fuel").read[String](fuelValidator(List("diesel", "gasoline"))) and
-     (JsPath \ "price").read[Int](min(0) keepAnd max(5000000))
-    )(AdvertInfo.apply _)
 
+  implicit val usageReads: Reads[CarUsage] = (
+      (JsPath \ "mileage").read[Int](min(1) keepAnd max(30000000)) and
+      (JsPath \ "firstReg").read[String](dateValidator)
+    )(CarUsage.apply _)
+
+  implicit val advertReads: Reads[AdvertInfo] = (
+      (JsPath \ "guid").read[String] and
+      (JsPath \ "title").read[String](minLength[String](2) keepAnd maxLength[String](32)) and
+      (JsPath \ "fuel").read[String](fuelValidator(List("diesel", "gasoline"))) and
+      (JsPath \ "price").read[Int](min(0) keepAnd max(5000000)) and
+      (JsPath \ "usage").readNullable[CarUsage]
+  )(AdvertInfo.apply _)
+
+  implicit val usageWrites: Writes[CarUsage] = (
+      (JsPath \ "mileage").write[Int] and
+      (JsPath \ "firstReg").write[String]
+    )(unlift(CarUsage.unapply))
 
   implicit val advertWrites: Writes[AdvertInfo] = (
-     (JsPath \ "guid").write[String] and
-     (JsPath \ "title").write[String] and
-     (JsPath \ "fuel").write[String] and
-     (JsPath \ "price").write[Int]
+      (JsPath \ "guid").write[String] and
+      (JsPath \ "title").write[String] and
+      (JsPath \ "fuel").write[String] and
+      (JsPath \ "price").write[Int] and
+      (JsPath \ "usage").writeNullable[CarUsage]
   )(unlift(AdvertInfo.unapply))
+
+
+  def dateValidator = Reads.pattern("(0?[1-9]|[12][0-9]|3[01])/(0?[1-9]|1[012])/((19|20)\\d\\d)".r, "error.date:dd/mm/yyyy")
 
   def fuelValidator(allowed:List[String]) =
     Reads.of[String].filter(ValidationError("allowed only "+allowed))(allowed.contains)
@@ -56,13 +71,13 @@ class Application extends Controller{
 
   def editAdvert(guid: String) = Action(BodyParsers.parse.json) { request =>
     request.body.validate[AdvertInfo] match {
-      case JsSuccess(advert, _) => 
+      case JsSuccess(advert, _) =>
           update(guid, advert) match {
             case Right(_) => Ok
             case Left(msg) => NotFound(Json.obj("status" -> "KO", "message" -> msg))
           }
       case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
-     }    
+     }
   }
 
   def deleteAdvert(guid: String) = Action {
@@ -94,7 +109,7 @@ class Application extends Controller{
       case Some(a) => val guid = advert.guid; Left(s"advert with guid=$guid already exist")
     }
   }
-  
+
   def update(guid:String, advert: AdvertInfo): Either[String, AdvertInfo] = {
     inMemoryDb.get(guid) match {
       case Some(_) =>  inMemoryDb += (guid -> advert); Right(advert)
@@ -112,6 +127,7 @@ class Application extends Controller{
 
 }
 
-case class AdvertInfo(guid:String, title:String, fuel:String, price:Int)
+case class AdvertInfo(guid:String, title:String, fuel:String, price:Int, usage: Option[CarUsage])
+case class CarUsage(mileage:Int, firstReg:String)
 
 object Application extends Application
