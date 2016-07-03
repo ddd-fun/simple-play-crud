@@ -54,7 +54,8 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
     request.body.validate[AdvertInfo] match  {
       case JsSuccess(advert, _) =>  { 
         val guid = advert.guid
-        service.store(guid, advert).map(_=> Ok(Json.obj("guid" -> advert.guid)))
+        service.store(guid, advert)
+          .map(_=> Ok(Json.obj("guid" -> advert.guid)))
           .getOrElse(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))) 
       }
       case errors : JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
@@ -62,21 +63,24 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
   }
 
   def getAdvert(guid: String) = Action {
-    service.get(guid).map(adv => Ok(Json.toJson[AdvertInfo](adv)))
+    service.get(guid)
+      .map(adv => Ok(Json.toJson[AdvertInfo](adv)))
       .getOrElse(NotFound(advertNotFoundJson(guid))) 
   }
 
 
   def updateAdvert(guid: String) = Action(BodyParsers.parse.json) { request =>
     request.body.validate[AdvertInfo] match {
-      case JsSuccess(advert, _) => service.update(guid, advert).map(_=>Ok)
+      case JsSuccess(advert, _) => service.update(guid, advert)
+                                    .map(_=>Ok)
                                     .getOrElse(NotFound(advertNotFoundJson(guid)))
       case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
      }
   }
 
   def deleteAdvert(guid: String) = Action {
-   service.delete(guid).map(_=>Ok)
+   service.delete(guid)
+     .map(_=>Ok)
      .getOrElse(NotFound(advertNotFoundJson(guid))) 
   }
 
