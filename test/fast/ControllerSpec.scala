@@ -6,7 +6,7 @@ import org.scalacheck.Prop.forAll
 import play.api.libs.json.{JsObject, Json}
 import play.api.test.{FakeHeaders, FakeRequest}
 
-object DomainGen{
+object DomainDataGen{
 
   val validTitleGen = for {
     length <- Gen.choose(2 ,32)
@@ -32,20 +32,20 @@ object DomainGen{
 }
 
 
-object ControllerSpec extends Properties("Controller") {
+object ControllerValidationSpec extends Properties("Controller validations") {
 
   object TestApplicationController extends controllers.Application
 
 
-  import DomainGen._
+  import DomainDataGen._
 
-  def notEmptyAndNotEqualTo(exclude: String)  = Gen.alphaStr suchThat(str => str.length > 0 && str != exclude)
+  def anyExcept(exclude: String) = Gen.alphaStr suchThat(str => str.length > 0 && str != exclude)
 
   val jsonWithInvalidFieldsNameGen = for{
-    guid <- notEmptyAndNotEqualTo("guid")
-    title <- notEmptyAndNotEqualTo("title")
-    price <- notEmptyAndNotEqualTo("price")
-    fuel <- notEmptyAndNotEqualTo("fuel")
+    guid <- anyExcept("guid")
+    title <- anyExcept("title")
+    price <- anyExcept("price")
+    fuel <- anyExcept("fuel")
   }yield (Json.obj(guid -> "guid", title -> "title", fuel -> "fuel", "price" -> 1))
 
 
@@ -80,8 +80,7 @@ object ControllerSpec extends Properties("Controller") {
     body =  json
   ){override def toString = s"$method $uri body: $body"}
 
-  def callAddAdvert(req:FakeRequest[JsObject]) = TestApplicationController.addAdvert.apply(req)
-  
+
   property("return 400 bad request if json contains fields with invalid name") =
     forAll(jsonWithInvalidFieldsNameGen.map(genFakeRequest)) { req =>
     val response = TestApplicationController.addAdvert.apply(req)

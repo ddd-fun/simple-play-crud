@@ -4,6 +4,12 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test._
 
+/**
+ * Keeping this class only as show case and justification of usage scala check for validation.
+ * It's really boring to write test coverage for invalid json scenarios in a way like code below.
+ * Wouldn't be  better if we described declaratively what is valid/invalid json is, and let the
+ * framework to generate hundreds of possible test cases? Please, see ControllerSpec.
+ */
 object DetailedAppSpec extends PlaySpecification with Results  {
 
   class TestApplicationController() extends controllers.Application
@@ -31,11 +37,7 @@ object DetailedAppSpec extends PlaySpecification with Results  {
 
       val bodyText: String = contentAsString(result) //must contain()
 
-      println(bodyText)
-
       status(result) mustEqual(BAD_REQUEST)
-
-      //{"status":"KO","message":{"obj.guid":[{"msg":["error.path.missing"],"args":[]}]}}
 
       (Json.parse(bodyText) \ "status").as[String] must equalTo("KO")
 
