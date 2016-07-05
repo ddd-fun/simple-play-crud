@@ -4,7 +4,7 @@ package model
 trait AdvertService[Advert, Id] extends Repository[Advert, Id] {
 
   def store(id:Id, advert: Advert): Option[Advert] = for {
-    _ <- invert(get(id))
+    _ <- get(id).invert
     s <- saveOrUpdate(advert)
   }yield s
 
@@ -18,10 +18,13 @@ trait AdvertService[Advert, Id] extends Repository[Advert, Id] {
     d <- remove(a)
   }yield d
 
-  def invert[A](o:Option[A]): Option[Unit] = {
-    o match {
-      case Some(_) => None
-      case None => Some(Unit)
+
+  implicit class OptionOperations(opt: Option[_]){
+    def invert : Option[Unit] = {
+      opt match {
+        case Some(_) => None
+        case None => Some(Unit)
+      }
     }
   }
 }
