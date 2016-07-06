@@ -12,14 +12,6 @@ object AppSkeletonSpec extends PlaySpecification {
 
   "Application" should {
 
-    "render the index page" in new WithServer(port = PORT_9000) {
-
-      val response = await(WS.url(APP_URL).get())
-
-      response.status must equalTo(OK)
-      response.body must contain("Your new application is ready.")
-    }
-
     "add advert and return guid" in new WithServer(port = PORT_9000) {
       withSavedAdvert { (json, guid) =>
          guid must not be empty

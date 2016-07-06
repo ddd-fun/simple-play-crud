@@ -1,5 +1,7 @@
 package controllers
 
+import java.util.UUID
+
 import model.{ServiceInterpreter, AdvertService, CarUsage, AdvertInfo}
 import play.api._
 import play.api.data.validation.ValidationError
@@ -9,7 +11,7 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
-class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
+class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
   implicit val usageReads: Reads[CarUsage] = (
       (JsPath \ "mileage").read[Int](min(1) keepAnd max(30000000)) and
@@ -17,7 +19,7 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
     )(CarUsage.apply _)
 
   implicit val advertReads: Reads[AdvertInfo] = (
-      (JsPath \ "guid").read[String] and
+      (JsPath \ "guid").read[UUID] and
       (JsPath \ "title").read[String](minLength[String](2) keepAnd maxLength[String](32)) and
       (JsPath \ "fuel").read[String](fuelValidator(List("diesel", "gasoline"))) and
       (JsPath \ "price").read[Int](min(0) keepAnd max(5000000)) and
@@ -30,7 +32,7 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
     )(unlift(CarUsage.unapply))
 
   implicit val advertWrites: Writes[AdvertInfo] = (
-      (JsPath \ "guid").write[String] and
+      (JsPath \ "guid").write[UUID] and
       (JsPath \ "title").write[String] and
       (JsPath \ "fuel").write[String] and
       (JsPath \ "price").write[Int] and
@@ -48,9 +50,9 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
     Ok(views.html.index("Your new application is ready."))
   }
 
-  def advertNotFoundJson(guid:String) = Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found")
+  def advertNotFoundJson(guid:UUID) = Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found")
 
-  def getAdvert(guid: String) = Action {
+  def getAdvert(guid: UUID) = Action {
     service.get(guid).map(adv => Ok(Json.toJson[AdvertInfo](adv)))
        .getOrElse(NotFound(advertNotFoundJson(guid)))
   }
@@ -62,13 +64,13 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
         .getOrElse(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))) })
   }
 
-  def updateAdvert(guid: String) = Action(BodyParsers.parse.json) { request =>
+  def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json) { request =>
    onValidAdvert(request.body)(advert =>
      service.update(guid, advert).map(_=> Ok)
        .getOrElse(NotFound(advertNotFoundJson(guid))))
   }
 
-  def deleteAdvert(guid: String) = Action {
+  def deleteAdvert(guid: UUID) = Action {
     service.delete(guid).map( _=> Ok)
         .getOrElse(NotFound(advertNotFoundJson(guid)))
   }

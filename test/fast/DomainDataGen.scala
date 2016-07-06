@@ -6,7 +6,7 @@ import play.api.libs.json.{JsObject, Json}
 
 trait DomainDataGen{
 
-  val validIdGen = Gen.uuid.map(_.toString);
+  val validIdGen = Gen.uuid;
 
   val validTitleGen = for {
     length <- Gen.choose(2 ,32)
@@ -51,7 +51,7 @@ trait DomainDataGen{
 
 
   val invalidJsonGen = (for{
-    (guid,g)  <- Gen.uuid.map(id => (id.toString, 1))
+    (guid,g)  <- Gen.uuid.map(id => (id, 1))
     (title,t) <- Gen.oneOf(validTitleGen.map((_,1)), inValidTitleGen.map((_,0)))
     (fuel,f)  <- Gen.oneOf(validFuelGen.map((_,1)), invalidFuelGen.map((_,0)))
     (price,p) <- Gen.oneOf(validPriceGen.map((_,1)), invalidPriceGen.map((_,0)) )

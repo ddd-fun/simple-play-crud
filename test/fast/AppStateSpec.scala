@@ -1,5 +1,7 @@
 package fast
 
+import java.util.UUID
+
 import model.ServiceInterpreter
 import org.scalacheck.{Prop, Gen}
 import org.scalacheck.commands.Commands
@@ -18,7 +20,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
   object TestApplication extends controllers.Application(ServiceInterpreter)
 
-  case class State(map:Set[String])
+  case class State(map:Set[UUID])
 
   type Sut = controllers.Application
 
@@ -30,7 +32,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
   def initialPreCondition(state: State): Boolean = state.map.isEmpty
 
-  def genInitialState: Gen[State] = State(Set.empty[String])
+  def genInitialState: Gen[State] = State(Set.empty[UUID])
 
   def newSut(state: State): Sut = TestApplication
 
@@ -46,7 +48,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
   }
 
   def genStoreAdvert =
-    validJsonGen.map(json => AddAdvert((json \ "guid").as[String], json))
+    validJsonGen.map(json => AddAdvert((json \ "guid").as[UUID], json))
 
   def genGetStoredAdvert(state:State) =
     Gen.oneOf(state.map.toSeq).map(GetStoredAdvert)
@@ -72,7 +74,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
 
 
-  case class AddAdvert(id: String, jsObject: JsObject) extends Command {
+  case class AddAdvert(id: UUID, jsObject: JsObject) extends Command {
 
     type Result = Future[play.api.mvc.Result]
 
@@ -87,7 +89,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
   }
 
-  case class GetStoredAdvert(id: String) extends Command {
+  case class GetStoredAdvert(id: UUID) extends Command {
 
     type Result = Future[play.api.mvc.Result]
 
@@ -102,7 +104,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
   }
 
-  case class GetNotExistedAdvert(id:String)  extends Command {
+  case class GetNotExistedAdvert(id:UUID)  extends Command {
 
     type Result = Future[play.api.mvc.Result]
 
@@ -118,7 +120,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
   }
 
 
-  case class DeleteStoredAdvert(id:String)  extends Command {
+  case class DeleteStoredAdvert(id:UUID)  extends Command {
 
     type Result = Future[play.api.mvc.Result]
 
@@ -133,7 +135,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
 
   }
 
-  case class DeleteNotExistedAdvert(id: String) extends Command {
+  case class DeleteNotExistedAdvert(id: UUID) extends Command {
 
     type Result = Future[play.api.mvc.Result]
 
@@ -148,7 +150,7 @@ object AppStateTransitions extends Commands with DomainDataGen{
   }
 
 
-  case class UpdateStoredAdvert(id:String, jsObject: JsObject)  extends Command {
+  case class UpdateStoredAdvert(id:UUID, jsObject: JsObject)  extends Command {
 
     type Result = Future[play.api.mvc.Result]
 

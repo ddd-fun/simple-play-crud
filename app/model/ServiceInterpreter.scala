@@ -1,11 +1,13 @@
 package model
 
+import java.util.UUID
 
-object ServiceInterpreter extends AdvertService[AdvertInfo, String]{
 
-  private val inMemoryDb = scala.collection.mutable.Map.empty[String, AdvertInfo]
+object ServiceInterpreter extends AdvertService[AdvertInfo, UUID]{
 
-  def get(id: String): Option[AdvertInfo] = inMemoryDb.get(id)
+  private val inMemoryDb = scala.collection.mutable.Map.empty[UUID, AdvertInfo]
+
+  def get(id: UUID): Option[AdvertInfo] = inMemoryDb.get(id)
 
   def saveOrUpdate(advert: AdvertInfo): Option[AdvertInfo] = {
     inMemoryDb += (advert.guid -> advert)
