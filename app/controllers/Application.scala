@@ -50,45 +50,39 @@ class Application(service:AdvertService[AdvertInfo, String]) extends Controller{
 
   def advertNotFoundJson(guid:String) = Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found")
 
-  def addAdvert = Action(BodyParsers.parse.json){ request =>
-    request.body.validate[AdvertInfo] match  {
-      case JsSuccess(advert, _) =>  { 
-        val guid = advert.guid
-        service.store(guid, advert)
-          .map(_=> Ok(Json.obj("guid" -> advert.guid)))
-          .getOrElse(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))) 
-      }
-      case errors : JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
-    }
-  }
-
   def getAdvert(guid: String) = Action {
-    service.get(guid)
-      .map(adv => Ok(Json.toJson[AdvertInfo](adv)))
-      .getOrElse(NotFound(advertNotFoundJson(guid))) 
+    service.get(guid).map(adv => Ok(Json.toJson[AdvertInfo](adv)))
+       .getOrElse(NotFound(advertNotFoundJson(guid)))
   }
 
+  def addAdvert = Action(BodyParsers.parse.json){ request =>
+    onValidAdvert(request.body)(advert => {
+      val guid = advert.guid
+      service.store(guid, advert).map(_=> Ok(Json.obj("guid" -> advert.guid)))
+        .getOrElse(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))) })
+  }
 
   def updateAdvert(guid: String) = Action(BodyParsers.parse.json) { request =>
-    request.body.validate[AdvertInfo] match {
-      case JsSuccess(advert, _) => service.update(guid, advert)
-                                    .map(_=>Ok)
-                                    .getOrElse(NotFound(advertNotFoundJson(guid)))
-      case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
-     }
+   onValidAdvert(request.body)(advert =>
+     service.update(guid, advert).map(_=> Ok)
+       .getOrElse(NotFound(advertNotFoundJson(guid))))
   }
 
   def deleteAdvert(guid: String) = Action {
-   service.delete(guid)
-     .map(_=>Ok)
-     .getOrElse(NotFound(advertNotFoundJson(guid))) 
+    service.delete(guid).map( _=> Ok)
+        .getOrElse(NotFound(advertNotFoundJson(guid)))
   }
 
   def getAllAdverts = Action {
     Ok(Json.obj("adverts" -> service.getAll))
   }
-  
 
+  private def onValidAdvert(json: JsValue)(invokeDomain: AdvertInfo => Result) = {
+    json.validate[AdvertInfo] match {
+      case JsSuccess(advert, _) =>  invokeDomain(advert)
+      case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
+    }
+  }
 }
 
 object Application extends Application(ServiceInterpreter)
