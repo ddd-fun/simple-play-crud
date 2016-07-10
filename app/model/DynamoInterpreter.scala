@@ -8,7 +8,7 @@ import infrastructure.DynamoDb
 import scala.collection.JavaConverters._
 
 
-class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID]{
+class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID] with Mapper{
 
   override def getAll: List[AdvertInfo] = {
     try {
@@ -17,13 +17,6 @@ class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID]{
     }catch {
       case error: Throwable => {error.printStackTrace(System.err); List.empty}
     }
-  }
-
-  def toDomainAdvert(item: Item): AdvertInfo ={
-    AdvertInfo(UUID.fromString(item.getString("guid")),
-      item.getString("title"),
-      item.getString("fuel"),
-      item.getInt("price"))
   }
   
   override def get(id: UUID): Option[AdvertInfo] = {
@@ -37,12 +30,7 @@ class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID]{
 
   override def saveOrUpdate(advert: AdvertInfo): Option[AdvertInfo] = {
     try {
-         val item = new Item
-         db.advertsTable.putItem(item
-           .withPrimaryKey("guid", advert.guid.toString)
-           .withString("title", advert.title)
-           .withString("fuel", advert.fuel)
-           .withNumber("price", advert.price))
+         db.advertsTable.putItem(toDynamoItem(advert))
          Some(advert)
     }catch {
       case error : Throwable => {error.printStackTrace(System.err); None}
@@ -57,5 +45,33 @@ class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID]{
       case error : Throwable => {error.printStackTrace(System.err); None}
     }
   }
+   
 }
 
+trait Mapper{
+
+  def toDomainAdvert(item: Item): AdvertInfo ={
+    val advert = AdvertInfo(UUID.fromString(
+      item.getString("guid")),
+      item.getString("title"),
+      item.getString("fuel"),
+      item.getInt("price"));
+    if(item.hasAttribute("mileage") && item.hasAttribute("firstReg")){
+      advert.copy(usage = Some(CarUsage(item.getInt("mileage"), item.getString("firstReg"))))
+    } else advert
+  }
+
+  def toDynamoItem(advert: AdvertInfo): Item ={
+    val item = new Item
+    item.withPrimaryKey("guid", advert.guid.toString)
+      .withString("title", advert.title)
+      .withString("fuel", advert.fuel)
+      .withNumber("price", advert.price)
+    advert.usage match {
+      case Some(u) => {item.withInt("mileage", u.mileage)
+        .withString("firstReg", u.firstReg) }
+      case _=> item
+    }
+  }
+
+}

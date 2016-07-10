@@ -5,7 +5,7 @@ import java.util.UUID
 
 import com.amazonaws.services.dynamodbv2.model._
 import fast.DomainDataGen
-import model.{AdvertInfo, DynamoInterpreter}
+import model.{CarUsage, AdvertInfo, DynamoInterpreter}
 import org.specs2.specification.BeforeAll
 import play.api.test.PlaySpecification
 
@@ -23,15 +23,15 @@ object DynamoRepositorySpec extends PlaySpecification with DomainDataGen with Be
 
     "save advert and then get it" in  {
 
-      val advert = AdvertInfo(UUID.randomUUID, "Audi a4", "diesel", 500)
+      val advert = AdvertInfo(UUID.randomUUID, "Audi a4", "diesel", 500, CarUsage(15000, "2014-02-29 23:59").toOption)
 
       val stored = Sut.saveOrUpdate(advert)
 
-      stored must equalTo(Some(advert)).setMessage("advert was not stored")
+      stored must equalTo(advert.toOption).setMessage("advert was not stored")
 
       val fetch = Sut.get(advert.guid)
 
-      fetch must equalTo( Some(advert)).setMessage("advert was not fetched")
+      fetch must equalTo(advert.toOption).setMessage("advert was not fetched")
 
     }
 
@@ -83,13 +83,11 @@ object TestDatabase extends DynamoDb {
 
   def createTable = {
     try {
-      //System.out.println("Attempting to create table; please wait...");
       val table = dynamoDB.createTable(setUp.tbName,
         util.Arrays.asList(new KeySchemaElement("guid", KeyType.HASH)),
         util.Arrays.asList(new AttributeDefinition("guid", ScalarAttributeType.S)),
         new ProvisionedThroughput(10L, 10L));
       table.waitForActive();
-      //System.out.println("Success.  Table status: " + table.getDescription().getTableStatus());
     } catch {
       case ex: Throwable => System.err.println("Unable to create table: " + ex.getMessage); throw ex;
     }
@@ -97,10 +95,8 @@ object TestDatabase extends DynamoDb {
 
   def deleteTable = {
     try {
-      //System.out.println("Attempting to create table; please wait...");
-       advertsTable.delete()
-       advertsTable.waitForDelete()
-      //System.out.println("Success.  Table status: " + table.getDescription().getTableStatus());
+         advertsTable.delete()
+         advertsTable.waitForDelete()
     } catch {
       case notFoundEx : ResourceNotFoundException => System.out.println("Unable to delete table: " + notFoundEx.getMessage);
       case ex: Throwable => System.err.println("Unable to delete table: " + ex.getMessage); throw ex;
