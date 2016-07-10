@@ -16,3 +16,15 @@ unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/
 resolvers += "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases"
 
 routesImport += "play.api.mvc.PathBindable.bindableUUID"
+
+DynamoDBLocal.settings
+
+DynamoDBLocal.Keys.dynamoDBLocalDownloadDirectory := file("dynamodb-local")
+
+test in Test <<= (test in Test).dependsOn(DynamoDBLocal.Keys.startDynamoDBLocal)
+
+DynamoDBLocal.Keys.dynamoDBLocalInMemory := true
+
+DynamoDBLocal.Keys.stopDynamoDBLocalAfterTests := true
+
+test in Test <<= (test in Test).dependsOn(DynamoDBLocal.Keys.startDynamoDBLocal)
