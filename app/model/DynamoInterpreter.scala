@@ -22,7 +22,7 @@ class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID] wit
   override def get(id: UUID): Option[AdvertInfo] = {
    try {
      val item = db.advertsTable.getItem("guid", id.toString)
-     Some(toDomainAdvert(item))
+     Option(item).map(toDomainAdvert)
    }catch {
      case error: Throwable => {error.printStackTrace(System.err); None}
    }

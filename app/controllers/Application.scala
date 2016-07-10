@@ -2,7 +2,8 @@ package controllers
 
 import java.util.UUID
 
-import model.{ServiceInterpreter, AdvertService, CarUsage, AdvertInfo}
+import infrastructure.{SetUp, DynamoDb}
+import model._
 import play.api._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -87,4 +88,18 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
   }
 }
 
-object Application extends Application(ServiceInterpreter)
+object Application extends Application(DynamoServiceInterpreter)
+
+object DynamoServiceInterpreter extends DynamoInterpreter(DynamoDb)
+
+object DynamoDb extends DynamoDb {
+  def setUp = {
+    val cfg = play.api.Play.current.configuration
+    val setUp = for{url <- cfg.getString("aws.dynamo.url")
+                    keyId <- cfg.getString("aws.dynamo.accessKeyId")
+                    key <- cfg.getString("aws.dynamo.accessKey")
+                  }yield SetUp(url, keyId, key)
+   setUp.getOrElse(throw new RuntimeException("could not read dynamo config"))
+  }
+}
+
