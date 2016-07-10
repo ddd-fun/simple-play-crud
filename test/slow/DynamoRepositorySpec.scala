@@ -56,6 +56,21 @@ object DynamoRepositorySpec extends PlaySpecification with DomainDataGen with Be
     }
 
 
+    "get all returns stored adverts" in {
+
+      val advert = AdvertInfo(UUID.randomUUID, "Audi a4", "diesel", 500)
+
+      val stored = Sut.saveOrUpdate(advert)
+
+      stored must equalTo(Some(advert)).setMessage("advert was not stored")
+
+      val list = Sut.getAll
+
+      list.find(_ == advert) must equalTo(Some(advert)).setMessage("advert must be in returned list")
+
+     }
+
+
    }
 
 }
