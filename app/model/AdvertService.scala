@@ -3,40 +3,31 @@ package model
 
 trait AdvertService[Advert, Id] extends Repository[Advert, Id] {
 
-  def store(id:Id, advert: Advert): Option[Advert] = for {
+  def store(id:Id, advert: Advert): AdvertAction[Advert] = for {
     _ <- get(id).invert
     s <- saveOrUpdate(advert)
   }yield s
 
-  def update(id:Id, advert: Advert) : Option[Advert] = for{
+  def update(id:Id, advert: Advert): AdvertAction[Advert] = for{
     _ <- get(id)
     u <- saveOrUpdate(advert)
   }yield u
 
-  def delete(id: Id) : Option[Advert] = for{
+  def delete(id: Id) : AdvertAction[Advert] = for{
     a <- get(id)
     d <- remove(a)
   }yield d
 
-
-  implicit class OptionOperations(opt: Option[_]){
-    def invert : Option[Unit] = {
-      opt match {
-        case Some(_) => None
-        case None => Some(Unit)
-      }
-    }
-  }
 }
 
 trait Repository[Advert, Id] {
 
-  def getAll : List[Advert]
+  def getAll : AdvertAction[List[Advert]]
 
-  def saveOrUpdate(advert: Advert) : Option[Advert]
+  def saveOrUpdate(advert: Advert) : AdvertAction[Advert]
 
-  def remove(advert: Advert) : Option[Advert]
+  def remove(advert: Advert) : AdvertAction[Advert]
 
-  def get(id:Id) : Option[Advert]
+  def get(id:Id) : AdvertAction[Advert]
 
 }

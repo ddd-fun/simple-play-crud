@@ -4,50 +4,61 @@ import java.util.UUID
 
 import com.amazonaws.services.dynamodbv2.document.Item
 import infrastructure.DynamoDb
-
 import scala.collection.JavaConverters._
+import scalaz._
+import Scalaz._
 
+class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID] with Mapper {
 
-class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID] with Mapper{
-
-  override def getAll: List[AdvertInfo] = {
+  override def getAll: AdvertAction[List[AdvertInfo]] = {
     try {
-       val items = db.advertsTable.scan()
-       items.asScala.map(toDomainAdvert).toList
-    }catch {
-      case error: Throwable => {error.printStackTrace(System.err); List.empty}
-    }
-  }
-  
-  override def get(id: UUID): Option[AdvertInfo] = {
-   try {
-     val item = db.advertsTable.getItem("guid", id.toString)
-     Option(item).map(toDomainAdvert)
-   }catch {
-     case error: Throwable => {error.printStackTrace(System.err); None}
-   }
-  }
-
-  override def saveOrUpdate(advert: AdvertInfo): Option[AdvertInfo] = {
-    try {
-         db.advertsTable.putItem(toDynamoItem(advert))
-         Some(advert)
-    }catch {
-      case error : Throwable => {error.printStackTrace(System.err); None}
+      val items = db.advertsTable.scan()
+      items.asScala.map(toDomainAdvert).toList.point[AdvertAction]
+    } catch {
+      case error: Throwable => {
+        error.printStackTrace(System.err);
+        -\/(DbAccessError(error.getMessage))
+      }
     }
   }
 
-  override def remove(advert: AdvertInfo): Option[AdvertInfo] = {
+  override def get(id: UUID): AdvertAction[AdvertInfo] = {
     try {
-        db.advertsTable.deleteItem("guid", advert.guid.toString)
-        Some(advert)
-    }catch {
-      case error : Throwable => {error.printStackTrace(System.err); None}
+      val item = db.advertsTable.getItem("guid", id.toString)
+      Option(item).map(i => \/-(toDomainAdvert(i))).getOrElse(-\/(AdvertNotFound))
+    } catch {
+      case error: Throwable => {
+        error.printStackTrace(System.err);
+        -\/(DbAccessError(error.getMessage))
+      }
     }
   }
-   
+
+  override def saveOrUpdate(advert: AdvertInfo): AdvertAction[AdvertInfo] = {
+    try {
+      db.advertsTable.putItem(toDynamoItem(advert))
+      advert.point[AdvertAction]
+    } catch {
+      case error: Throwable => {
+        error.printStackTrace(System.err);
+        -\/(DbAccessError(error.getMessage))
+      }
+    }
+  }
+
+  override def remove(advert: AdvertInfo): AdvertAction[AdvertInfo] = {
+    try {
+      db.advertsTable.deleteItem("guid", advert.guid.toString)
+      advert.point[AdvertAction]
+    } catch {
+      case error: Throwable => {
+        error.printStackTrace(System.err);
+        -\/(DbAccessError(error.getMessage))
+      }
+    }
+
+  }
 }
-
 trait Mapper{
 
   def toDomainAdvert(item: Item): AdvertInfo ={

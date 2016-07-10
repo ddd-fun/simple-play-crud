@@ -2,26 +2,31 @@ package fast
 
 import java.util.UUID
 
-import model.{AdvertInfo, AdvertService}
+import model.{AdvertAction, AdvertNotFound, AdvertInfo, AdvertService}
+
+import scalaz.{-\/, \/-}
 
 
 object InMemoryServiceInterpreter extends AdvertService[AdvertInfo, UUID]{
 
   private val inMemoryDb = scala.collection.mutable.Map.empty[UUID, AdvertInfo]
 
-  def get(id: UUID): Option[AdvertInfo] = inMemoryDb.get(id)
+  def get(id: UUID): AdvertAction[AdvertInfo] = {
+    inMemoryDb.get(id).map(a => \/-(a)).getOrElse(-\/(AdvertNotFound))
+  }
 
-  def saveOrUpdate(advert: AdvertInfo): Option[AdvertInfo] = {
+  def saveOrUpdate(advert: AdvertInfo): AdvertAction[AdvertInfo] = {
     inMemoryDb += (advert.guid -> advert)
-    Some(advert)
+    \/-(advert)
   }
 
-  def remove(advert: AdvertInfo): Option[AdvertInfo] = {
+  def remove(advert: AdvertInfo): AdvertAction[AdvertInfo] = {
     inMemoryDb -= advert.guid
-    Some(advert)
+    \/-(advert)
   }
 
-  def getAll: List[AdvertInfo] =
-    inMemoryDb.values.foldLeft(List[AdvertInfo]())((l,info) => info :: l)
-
+  def getAll: AdvertAction[List[AdvertInfo]] ={
+   val result = inMemoryDb.values.foldLeft(List[AdvertInfo]())((l,info) => info :: l)
+   \/-(result)
+  }
 }

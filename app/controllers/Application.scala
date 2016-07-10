@@ -12,6 +12,8 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
+import scalaz.{-\/, \/-}
+
 class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
   implicit val usageReads: Reads[CarUsage] = (
@@ -54,30 +56,47 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
   def advertNotFoundJson(guid:UUID) = Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found")
 
   def getAdvert(guid: UUID) = Action {
-    service.get(guid).map(adv => Ok(Json.toJson[AdvertInfo](adv)))
-       .getOrElse(NotFound(advertNotFoundJson(guid)))
+    service.get(guid) match {
+      case \/-(adv) =>  Ok(Json.toJson[AdvertInfo](adv))
+      case -\/(AdvertNotFound) => NotFound(advertNotFoundJson(guid))
+      case -\/(error) => InternalServerError(error.toString)
+    }
   }
 
   def addAdvert = Action(BodyParsers.parse.json){ request =>
     onValidAdvert(request.body)(advert => {
       val guid = advert.guid
-      service.store(guid, advert).map(_=> Ok(Json.obj("guid" -> advert.guid)))
-        .getOrElse(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))) })
+      service.store(guid, advert) match {
+        case \/-(adv) => Ok(Json.obj("guid" -> adv.guid))
+        case -\/(AdvertAlreadyExist) => BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))
+        case -\/(error) => InternalServerError(error.toString)
+      }
+    })
   }
 
   def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json) { request =>
    onValidAdvert(request.body)(advert =>
-     service.update(guid, advert).map(_=> Ok)
-       .getOrElse(NotFound(advertNotFoundJson(guid))))
+     service.update(guid, advert) match {
+       case \/-(adv) => Ok
+       case -\/(AdvertNotFound) => NotFound(advertNotFoundJson(guid))
+       case -\/(er) => InternalServerError(er.toString)
+     })
   }
 
   def deleteAdvert(guid: UUID) = Action {
-    service.delete(guid).map( _=> Ok)
-        .getOrElse(NotFound(advertNotFoundJson(guid)))
+    service.delete(guid) match {
+      case \/-(adv) => Ok
+      case -\/(AdvertNotFound) => NotFound(advertNotFoundJson(guid))
+      case -\/(er) => InternalServerError(er.toString)
+    }
   }
 
   def getAllAdverts = Action {
-    Ok(Json.obj("adverts" -> service.getAll))
+    service.getAll match {
+      case \/-(advs) => Ok(Json.obj("adverts" -> advs))
+      case -\/(er) => InternalServerError(er.toString)
+    }
+
   }
 
   private def onValidAdvert(json: JsValue)(invokeDomain: AdvertInfo => Result) = {
@@ -95,10 +114,10 @@ object DynamoServiceInterpreter extends DynamoInterpreter(DynamoDb)
 object DynamoDb extends DynamoDb {
   def setUp = {
     val cfg = play.api.Play.current.configuration
-    val setUp = for{url <- cfg.getString("aws.dynamo.url")
-                    keyId <- cfg.getString("aws.dynamo.accessKeyId")
-                    key <- cfg.getString("aws.dynamo.accessKey")
-                  }yield SetUp(url, keyId, key)
+    val setUp = for{  u <- cfg.getString("aws.dynamo.url")
+                      i <- cfg.getString("aws.dynamo.accessKeyId")
+                      k <- cfg.getString("aws.dynamo.accessKey")
+                  } yield SetUp(u, i, k)
    setUp.getOrElse(throw new RuntimeException("could not read dynamo config"))
   }
 }

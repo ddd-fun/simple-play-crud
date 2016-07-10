@@ -5,9 +5,12 @@ import java.util.UUID
 
 import com.amazonaws.services.dynamodbv2.model._
 import fast.DomainDataGen
-import model.{CarUsage, AdvertInfo, DynamoInterpreter}
+import model.{AdvertAction, CarUsage, AdvertInfo, DynamoInterpreter}
 import org.specs2.specification.BeforeAll
 import play.api.test.PlaySpecification
+import scalaz._
+import Scalaz._
+
 
 object DynamoRepositorySpec extends PlaySpecification with DomainDataGen with BeforeAll {
 
@@ -27,11 +30,11 @@ object DynamoRepositorySpec extends PlaySpecification with DomainDataGen with Be
 
       val stored = Sut.saveOrUpdate(advert)
 
-      stored must equalTo(advert.toOption).setMessage("advert was not stored")
+      stored must equalTo(\/-(advert)).setMessage("advert was not stored")
 
       val fetch = Sut.get(advert.guid)
 
-      fetch must equalTo(advert.toOption).setMessage("advert was not fetched")
+      fetch must equalTo(\/-(advert)).setMessage("advert was not fetched")
 
     }
 
@@ -41,17 +44,17 @@ object DynamoRepositorySpec extends PlaySpecification with DomainDataGen with Be
 
       val stored = Sut.saveOrUpdate(advert)
 
-      stored must equalTo(Some(advert)).setMessage("advert was not stored")
+      stored must equalTo(\/-(advert)).setMessage("advert was not stored")
 
       val updateAdv = advert.copy(title = "Audi A5", fuel ="gasoline", price = 600)
 
       val updated = Sut.saveOrUpdate(advert.copy(title = "Audi A5", fuel ="gasoline", price = 600))
 
-      updated must equalTo(Some(updateAdv)).setMessage("advert was not updated")
+      updated must equalTo(\/-(updateAdv)).setMessage("advert was not updated")
 
       val fetched = Sut.get(advert.guid)
 
-      fetched must equalTo(Some(updateAdv)).setMessage("fetch updated advert")
+      fetched must equalTo(\/-(updateAdv)).setMessage("fetch updated advert")
 
     }
 
@@ -62,11 +65,11 @@ object DynamoRepositorySpec extends PlaySpecification with DomainDataGen with Be
 
       val stored = Sut.saveOrUpdate(advert)
 
-      stored must equalTo(Some(advert)).setMessage("advert was not stored")
+      stored must equalTo(\/-(advert)).setMessage("advert was not stored")
 
       val list = Sut.getAll
 
-      list.find(_ == advert) must equalTo(Some(advert)).setMessage("advert must be in returned list")
+      list.getOrElse(List.empty[AdvertInfo]).find(_ == advert) must equalTo(Some(advert)).setMessage("advert must be in returned list")
 
      }
 
