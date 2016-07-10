@@ -6,7 +6,9 @@ lazy val `simpleplaycrud` = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.7"
 
-libraryDependencies ++= Seq( jdbc , cache , ws   , specs2 % Test, "org.scalacheck" %% "scalacheck" % "1.13.0" % "test" )
+libraryDependencies ++= Seq( jdbc , cache , ws   , specs2 % Test,
+                          "org.scalacheck" %% "scalacheck" % "1.13.0" % "test",
+                          "com.amazonaws"  %  "aws-java-sdk-dynamodb" %  "1.11.15")
 
 
 unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/test" )  
