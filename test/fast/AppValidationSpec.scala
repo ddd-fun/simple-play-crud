@@ -1,7 +1,6 @@
 package fast
 
 import fast.DetailedAppSpec._
-import model.ServiceInterpreter
 import org.scalacheck._
 import org.scalacheck.Prop.{forAll, BooleanOperators}
 import play.api.libs.json.{JsObject, Json}
@@ -10,7 +9,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 
 object AppValidationSpec extends Properties("Application") with DomainDataGen {
 
-  object TestApplicationController extends controllers.Application(ServiceInterpreter)
+  object TestApplicationController extends controllers.Application(InMemoryServiceInterpreter)
 
   property("return 400 if any of json fields has invalid name") =
   forAll(jsonWithInvalidFieldNamesGen.map(fakePostAdvertRequest)) { req =>

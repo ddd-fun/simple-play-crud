@@ -1,9 +1,11 @@
-package model
+package fast
 
 import java.util.UUID
 
+import model.{AdvertInfo, AdvertService}
 
-object ServiceInterpreter extends AdvertService[AdvertInfo, UUID]{
+
+object InMemoryServiceInterpreter extends AdvertService[AdvertInfo, UUID]{
 
   private val inMemoryDb = scala.collection.mutable.Map.empty[UUID, AdvertInfo]
 

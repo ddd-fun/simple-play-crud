@@ -2,7 +2,6 @@ package fast
 
 import java.util.UUID
 
-import model.ServiceInterpreter
 import org.scalacheck.{Prop, Gen}
 import org.scalacheck.commands.Commands
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -18,7 +17,7 @@ object AppStateSpec extends org.scalacheck.Properties("Application") {
 
 object AppStateTransitions extends Commands with DomainDataGen{
 
-  object TestApplication extends controllers.Application(ServiceInterpreter)
+  object TestApplication extends controllers.Application(InMemoryServiceInterpreter)
 
   case class State(map:Set[UUID])
 
