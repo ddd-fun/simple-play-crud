@@ -12,7 +12,7 @@ object InMemoryServiceInterpreter extends AdvertService[AdvertInfo, UUID]{
   private val inMemoryDb = scala.collection.mutable.Map.empty[UUID, AdvertInfo]
 
   def get(id: UUID): AdvertAction[AdvertInfo] = {
-    inMemoryDb.get(id).map(a => \/-(a)).getOrElse(-\/(AdvertNotFound))
+    inMemoryDb.get(id).map(a => \/-(a)).getOrElse(-\/(AdvertNotFound(id)))
   }
 
   def saveOrUpdate(advert: AdvertInfo): AdvertAction[AdvertInfo] = {

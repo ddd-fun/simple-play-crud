@@ -25,7 +25,7 @@ class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID] wit
   override def get(id: UUID): AdvertAction[AdvertInfo] = {
     try {
       val item = db.advertsTable.getItem("guid", id.toString)
-      Option(item).map(i => \/-(toDomainAdvert(i))).getOrElse(-\/(AdvertNotFound))
+      Option(item).map(i => \/-(toDomainAdvert(i))).getOrElse(-\/(AdvertNotFound(id)))
     } catch {
       case error: Throwable => {
         error.printStackTrace(System.err);

@@ -8,11 +8,11 @@ import play.api._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import play.api.mvc._
-import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
-import scalaz.{-\/, \/-}
+import scala.concurrent.Future
+import scalaz.{-\/, \/, \/-}
 
 class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
@@ -53,42 +53,25 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
     Ok(views.html.index("Your new application is ready."))
   }
 
-  def advertNotFoundJson(guid:UUID) = Json.obj("status" -> "KO", "message" -> s"advert by guid=$guid is not found")
-
   def getAdvert(guid: UUID) = Action {
-    service.get(guid) match {
-      case \/-(adv) =>  Ok(Json.toJson[AdvertInfo](adv))
-      case -\/(AdvertNotFound) => NotFound(advertNotFoundJson(guid))
-      case -\/(error) => InternalServerError(error.toString)
-    }
+    callDomain(service.get(guid),
+      (advert:AdvertInfo) => Ok(Json.toJson[AdvertInfo](advert)))
   }
 
   def addAdvert = Action(BodyParsers.parse.json){ request =>
     onValidAdvert(request.body)(advert => {
-      val guid = advert.guid
-      service.store(guid, advert) match {
-        case \/-(adv) => Ok(Json.obj("guid" -> adv.guid))
-        case -\/(AdvertAlreadyExist) => BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=$guid already exist"))
-        case -\/(error) => InternalServerError(error.toString)
-      }
+       callDomain(service.store(advert.guid, advert),
+         (s:AdvertInfo) => Ok(Json.obj("guid" -> s.guid)))
     })
   }
 
   def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json) { request =>
    onValidAdvert(request.body)(advert =>
-     service.update(guid, advert) match {
-       case \/-(adv) => Ok
-       case -\/(AdvertNotFound) => NotFound(advertNotFoundJson(guid))
-       case -\/(er) => InternalServerError(er.toString)
-     })
+      callDomain(service.update(guid, advert), (advert:AdvertInfo) => Ok))
   }
 
   def deleteAdvert(guid: UUID) = Action {
-    service.delete(guid) match {
-      case \/-(adv) => Ok
-      case -\/(AdvertNotFound) => NotFound(advertNotFoundJson(guid))
-      case -\/(er) => InternalServerError(er.toString)
-    }
+    callDomain(service.delete(guid), (advert:AdvertInfo) => Ok)
   }
 
   def getAllAdverts = Action {
@@ -96,7 +79,6 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
       case \/-(advs) => Ok(Json.obj("adverts" -> advs))
       case -\/(er) => InternalServerError(er.toString)
     }
-
   }
 
   private def onValidAdvert(json: JsValue)(invokeDomain: AdvertInfo => Result) = {
@@ -105,6 +87,17 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
       case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
     }
   }
+
+  private def callDomain[A](domainBlock: => \/[Error, A], onRight: A => Result): Result ={
+    domainBlock match {
+      case \/-(a) => onRight(a)
+      case -\/(n:AdvertNotFound) => NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=${n.guid} is not found"))
+      case -\/(e:AdvertAlreadyExist) => BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=${e.guid} already exist"))
+      case -\/(n:DbAccessError) => InternalServerError(Json.obj("status" -> "KO", "message" -> s"ad access error: ${n.msg}"))
+      case -\/(err) => InternalServerError(Json.obj("status" -> "KO", "message" -> s"ups! we experienced some error, let us know about this: ${err.toString}"))
+    }
+  }
+
 }
 
 object Application extends Application(DynamoServiceInterpreter)

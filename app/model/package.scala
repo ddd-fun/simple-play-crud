@@ -1,3 +1,5 @@
+import java.util.UUID
+
 import scalaz._
 
 package object model {
@@ -7,16 +9,16 @@ package object model {
   implicit class ResultOperations(opt: AdvertAction[_]){
     def invert : AdvertAction[Unit] = {
       opt match {
-        case \/-(_) => -\/(AdvertAlreadyExist)
-        case -\/(AdvertNotFound) => \/-()
+        case \/-(a:AdvertInfo) => -\/(AdvertAlreadyExist(a.guid))
+        case -\/(AdvertNotFound(_)) => \/-(():Unit)
         case e@ -\/(_)=> e
       }
     }
   }
 
   trait Error
-  case object AdvertNotFound extends Error
-  case object AdvertAlreadyExist extends Error
+  case class AdvertNotFound(guid:UUID) extends Error
+  case class AdvertAlreadyExist(guid:UUID) extends Error
   case class DbAccessError(msg:String) extends Error
 
 }
