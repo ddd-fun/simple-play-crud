@@ -4,16 +4,11 @@ import java.util.UUID
 
 import infrastructure.{SetUp, DynamoDb}
 import model._
-import org.omg.CosNaming.NamingContextPackage.NotFound
-import play.api._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
-import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
-
-import scala.concurrent.Future
 import scalaz.{-\/, \/-, \/}
 
 class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
