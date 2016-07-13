@@ -4,15 +4,17 @@ import java.util.UUID
 
 import infrastructure.{SetUp, DynamoDb}
 import model._
+import org.omg.CosNaming.NamingContextPackage.NotFound
 import play.api._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
+import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
 import scala.concurrent.Future
-import scalaz.{-\/, \/, \/-}
+import scalaz.{-\/, \/-, \/}
 
 class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
@@ -54,48 +56,60 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
   }
 
   def getAdvert(guid: UUID) = Action {
-    callDomain(service.get(guid),
-      (advert:AdvertInfo) => Ok(Json.toJson[AdvertInfo](advert)))
+    rightElseLeft(
+      domain(service.get(guid)).map(advert => Ok(Json.toJson[AdvertInfo](advert)))
+    )
   }
 
   def addAdvert = Action(BodyParsers.parse.json){ request =>
-    onValidAdvert(request.body)(advert => {
-       callDomain(service.store(advert.guid, advert),
-         (s:AdvertInfo) => Ok(Json.obj("guid" -> s.guid)))
-    })
+    rightElseLeft(
+      for{
+        adv <- validateAdvert(request.body)
+        _   <- domain(service.store(adv.guid, adv))
+      } yield Ok(Json.obj("guid" -> adv.guid))
+    )
   }
 
   def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json) { request =>
-   onValidAdvert(request.body)(advert =>
-      callDomain(service.update(guid, advert), (advert:AdvertInfo) => Ok))
+    rightElseLeft(
+     for{
+       adv <- validateAdvert(request.body)
+         _ <- domain(service.update(guid, adv))
+    } yield Ok )
   }
 
   def deleteAdvert(guid: UUID) = Action {
-    callDomain(service.delete(guid), (advert:AdvertInfo) => Ok)
+    rightElseLeft(
+      domain(service.delete(guid)).map(_=> Ok)
+    )
   }
 
   def getAllAdverts = Action {
-    service.getAll match {
-      case \/-(advs) => Ok(Json.obj("adverts" -> advs))
-      case -\/(er) => InternalServerError(er.toString)
-    }
+    rightElseLeft(
+      domain(service.getAll).map(advs => Ok(Json.obj("adverts" -> advs)))
+    )
   }
 
-  private def onValidAdvert(json: JsValue)(invokeDomain: AdvertInfo => Result) = {
+  def validateAdvert(json: JsValue) : \/[Result, AdvertInfo] = {
     json.validate[AdvertInfo] match {
-      case JsSuccess(advert, _) =>  invokeDomain(advert)
-      case errors: JsError => BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors)))
+      case JsSuccess(a, _) =>  \/-(a)
+      case errors: JsError => -\/(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors))))
     }
   }
 
-  private def callDomain[A](domainBlock: => \/[Error, A], onRight: A => Result): Result ={
-    domainBlock match {
-      case \/-(a) => onRight(a)
-      case -\/(n:AdvertNotFound) => NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=${n.guid} is not found"))
-      case -\/(e:AdvertAlreadyExist) => BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=${e.guid} already exist"))
-      case -\/(n:DbAccessError) => InternalServerError(Json.obj("status" -> "KO", "message" -> s"ad access error: ${n.msg}"))
-      case -\/(err) => InternalServerError(Json.obj("status" -> "KO", "message" -> s"ups! we experienced some error, let us know about this: ${err.toString}"))
+  def domain[A](advertAction: AdvertAction[A]) : \/[Result, A] = {
+    advertAction match {
+      case \/-(a) => \/-(a)
+      case -\/(n:AdvertNotFound) => -\/(NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=${n.guid} is not found")))
+      case -\/(e:AdvertAlreadyExist) => -\/(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=${e.guid} already exist")))
+      case -\/(n:DbAccessError) => -\/(InternalServerError(Json.obj("status" -> "KO", "message" -> s"ad access error: ${n.msg}")))
+      case -\/(err) => -\/(InternalServerError(Json.obj("status" -> "KO", "message" -> s"ups! we experienced some error, let us know about this: ${err.toString}")))
     }
+  }
+
+  def rightElseLeft[A](e: \/[A,A]) = e match {
+    case \/-(r) => r
+    case -\/(l) => l
   }
 
 }
