@@ -50,41 +50,36 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
     Ok(views.html.index("Your new application is ready."))
   }
 
-  def getAdvert(guid: UUID) = Action {
-    rightElseLeft(
+  def getAdvert(guid: UUID) = Action { unliftResult(
       for{
          adv <- service.get(guid).mapErrors
       }yield(Ok(Json.toJson[AdvertInfo](adv)))
     )
   }
 
-  def addAdvert = Action(BodyParsers.parse.json){ request =>
-    rightElseLeft(
+  def addAdvert = Action(BodyParsers.parse.json){ req => unliftResult(
       for{
-        adv <- request.body.mapToAdvert
+        adv <- req.body.mapToAdvert
         _   <- service.store(adv.guid, adv).mapErrors
       } yield Ok(Json.obj("guid" -> adv.guid))
     )
   }
 
-  def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json) { request =>
-    rightElseLeft(
+  def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json){ req => unliftResult(
      for{
-       adv <- request.body.mapToAdvert
+       adv <- req.body.mapToAdvert
          _ <- service.update(guid, adv).mapErrors
     } yield Ok )
   }
 
-  def deleteAdvert(guid: UUID) = Action {
-    rightElseLeft(
+  def deleteAdvert(guid: UUID) = Action {unliftResult(
       for{
          _ <- service.delete(guid).mapErrors
       }yield(Ok)
     )
   }
 
-  def getAllAdverts = Action {
-    rightElseLeft(
+  def getAllAdverts = Action { unliftResult(
       for{
          advs <- service.getAll.mapErrors
       }yield(Ok(Json.obj("adverts" -> advs)))
@@ -100,7 +95,7 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
      }
   }
 
-  def rightElseLeft[A](e: \/[A,A]) = e match {
+  def unliftResult[A](e: \/[A,A]) : A = e match {
     case \/-(r) => r
     case -\/(l) => l
   }
