@@ -119,9 +119,9 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
 }
 
-object Application extends Application(DynamoServiceInterpreter)
+object Application extends Application(ServiceInterpreter)
 
-object DynamoServiceInterpreter extends DynamoInterpreter(DB)
+object ServiceInterpreter extends DynamoInterpreter(DB)
 
 object DB extends DynamoDb {
   def setUp = {
