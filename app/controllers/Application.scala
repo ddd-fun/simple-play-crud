@@ -52,42 +52,42 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
   def getAdvert(guid: UUID) = Action { unliftResult(
       for{
-         adv <- service.get(guid).mapErrors
+         adv <- service.get(guid).leftMap(toHttpError)
       }yield(Ok(Json.toJson[AdvertInfo](adv)))
     )
   }
 
   def addAdvert = Action(BodyParsers.parse.json){ req => unliftResult(
       for{
-        adv <- req.body.mapToAdvert
-        _   <- service.store(adv.guid, adv).mapErrors
+        adv <- req.body.readAdvert
+          _ <- service.store(adv.guid, adv).leftMap(toHttpError)
       } yield Ok(Json.obj("guid" -> adv.guid))
     )
   }
 
   def updateAdvert(guid: UUID) = Action(BodyParsers.parse.json){ req => unliftResult(
      for{
-       adv <- req.body.mapToAdvert
-         _ <- service.update(guid, adv).mapErrors
+       adv <- req.body.readAdvert
+         _ <- service.update(guid, adv).leftMap(toHttpError)
     } yield Ok )
   }
 
   def deleteAdvert(guid: UUID) = Action {unliftResult(
       for{
-         _ <- service.delete(guid).mapErrors
+         _ <- service.delete(guid).leftMap(toHttpError)
       }yield(Ok)
     )
   }
 
   def getAllAdverts = Action { unliftResult(
       for{
-         advs <- service.getAll.mapErrors
+         advs <- service.getAll.leftMap(toHttpError)
       }yield(Ok(Json.obj("adverts" -> advs)))
     )
   }
 
   implicit class JsValueOp(v: JsValue) {
-     def mapToAdvert : \/[Result, AdvertInfo] = {
+     def readAdvert : \/[Result, AdvertInfo] = {
        v.validate[AdvertInfo] match {
          case JsSuccess(a, _) =>  \/-(a)
          case errors: JsError => -\/(BadRequest(Json.obj("status" -> "KO", "message" -> JsError.toJson(errors))))
@@ -100,15 +100,13 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
     case -\/(l) => l
   }
 
-  implicit class EitherOp[L,R](v: \/[L,R]) {
-    def mapErrors: \/[Result, R] = {
-      v match {
-        case \/-(a) => \/-(a)
-        case -\/(n:AdvertNotFound) => -\/(NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=${n.guid} is not found")))
-        case -\/(e:AdvertAlreadyExist) => -\/(BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=${e.guid} already exist")))
-        case -\/(n:DbAccessError) => -\/(InternalServerError(Json.obj("status" -> "KO", "message" -> s"ad access error: ${n.msg}")))
-        case -\/(err) => -\/(InternalServerError(Json.obj("status" -> "KO", "message" -> s"ups! we experienced some error, let us know about this: ${err.toString}")))
-      }
+
+  def toHttpError(e:Error): Result ={
+   e match {
+       case AdvertNotFound(n) => NotFound(Json.obj("status" -> "KO", "message" -> s"advert by guid=${n} is not found"))
+       case AdvertAlreadyExist(e) => BadRequest(Json.obj("status" -> "KO", "message" -> s"advert with guid=${e} already exist"))
+       case DbAccessError(m) => InternalServerError(Json.obj("status" -> "KO", "message" -> s"ad access error: ${m}"))
+       case err@ _ => InternalServerError(Json.obj("status" -> "KO", "message" -> s"ups! we experienced some error, let us know about this: ${err}"))
     }
   }
 
