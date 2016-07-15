@@ -4,7 +4,7 @@ package model
 trait AdvertService[Advert, Id] extends Repository[Advert, Id] {
 
   def store(id:Id, advert: Advert): AdvertAction[Advert] = for {
-    _ <- get(id).invert
+    _ <- ensureNotExist(id)
     s <- saveOrUpdate(advert)
   }yield s
 
@@ -30,4 +30,5 @@ trait Repository[Advert, Id] {
 
   def get(id:Id) : AdvertAction[Advert]
 
+  def ensureNotExist(id:Id) : AdvertAction[Unit]
 }

@@ -34,6 +34,14 @@ class DynamoInterpreter(db:DynamoDb) extends AdvertService[AdvertInfo, UUID] wit
     }
   }
 
+  override def ensureNotExist(id: UUID): AdvertAction[Unit] = {
+    get(id) match {
+      case \/-(adv) => -\/(AdvertAlreadyExist(adv.guid))
+      case -\/(AdvertNotFound(_)) => \/-(():Unit)
+      case e@ -\/(_)=> e
+    }
+  }
+
   override def saveOrUpdate(advert: AdvertInfo): AdvertAction[AdvertInfo] = {
     try {
       db.advertsTable.putItem(toDynamoItem(advert))

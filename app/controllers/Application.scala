@@ -121,9 +121,9 @@ class Application(service:AdvertService[AdvertInfo, UUID]) extends Controller{
 
 object Application extends Application(DynamoServiceInterpreter)
 
-object DynamoServiceInterpreter extends DynamoInterpreter(DynamoDb)
+object DynamoServiceInterpreter extends DynamoInterpreter(DB)
 
-object DynamoDb extends DynamoDb {
+object DB extends DynamoDb {
   def setUp = {
     val cfg = play.api.Play.current.configuration
     val setUp = for{  u <- cfg.getString("aws.dynamo.url")

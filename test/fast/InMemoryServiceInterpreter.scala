@@ -2,7 +2,7 @@ package fast
 
 import java.util.UUID
 
-import model.{AdvertAction, AdvertNotFound, AdvertInfo, AdvertService}
+import model._
 
 import scalaz.{-\/, \/-}
 
@@ -28,5 +28,13 @@ object InMemoryServiceInterpreter extends AdvertService[AdvertInfo, UUID]{
   def getAll: AdvertAction[List[AdvertInfo]] ={
    val result = inMemoryDb.values.foldLeft(List[AdvertInfo]())((l,info) => info :: l)
    \/-(result)
+  }
+
+  def ensureNotExist(id: UUID): AdvertAction[Unit] = {
+    get(id) match {
+      case \/-(adv) => -\/(AdvertAlreadyExist(adv.guid))
+      case -\/(AdvertNotFound(_)) => \/-(():Unit)
+      case e@ -\/(_)=> e
+    }
   }
 }
